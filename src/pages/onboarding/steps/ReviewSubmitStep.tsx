@@ -6,12 +6,6 @@ import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { INDIAN_STATES } from '@/types/onboarding';
 
-const MSME_CATEGORIES: Record<string, string> = {
-  micro: 'Micro Enterprise',
-  small: 'Small Enterprise',
-  medium: 'Medium Enterprise',
-};
-
 interface ReviewSectionProps {
   title: string;
   icon: React.ReactNode;
@@ -144,13 +138,7 @@ export function ReviewSubmitStep() {
                 value={msmeStatus.msme_status === 'yes' ? 'Yes' : 'No'}
               />
               {msmeStatus.msme_status === 'yes' && (
-                <>
-                  <ReviewItem label="Udyam Number" value={msmeStatus.msme_number} />
-                  <ReviewItem
-                    label="Category"
-                    value={MSME_CATEGORIES[msmeStatus.msme_category] || ''}
-                  />
-                </>
+                <ReviewItem label="Udyam Number" value={msmeStatus.msme_number} />
               )}
             </ReviewSection>
 
