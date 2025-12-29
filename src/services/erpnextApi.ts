@@ -94,6 +94,8 @@ export async function getSupplier(supplierName: string): Promise<SupplierData> {
     {
       method: 'GET',
       headers: getHeaders(),
+      mode: 'cors',
+      credentials: 'omit',
     }
   );
 
