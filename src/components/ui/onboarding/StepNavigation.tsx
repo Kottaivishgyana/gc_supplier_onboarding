@@ -1,13 +1,14 @@
-import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 interface StepNavigationProps {
   onNext: () => boolean;
   onSubmit?: () => void;
+  isSubmitting?: boolean;
 }
 
-export function StepNavigation({ onNext, onSubmit }: StepNavigationProps) {
+export function StepNavigation({ onNext, onSubmit, isSubmitting }: StepNavigationProps) {
   const { currentStep, nextStep, prevStep } = useOnboardingStore();
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === 6;
@@ -36,6 +37,7 @@ export function StepNavigation({ onNext, onSubmit }: StepNavigationProps) {
         <Button
           variant="secondary"
           onClick={handlePrev}
+          disabled={isSubmitting}
           className="w-full sm:w-auto gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -58,13 +60,22 @@ export function StepNavigation({ onNext, onSubmit }: StepNavigationProps) {
       ) : (
         <Button
           onClick={handleSubmit}
+          disabled={isSubmitting}
           className="w-full sm:w-auto gap-2 bg-green-600 hover:bg-green-700 shadow-md shadow-green-500/20 hover:shadow-lg hover:shadow-green-500/30"
         >
-          <CheckCircle className="w-4 h-4" />
-          Submit Application
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              Submit Application
+            </>
+          )}
         </Button>
       )}
     </div>
   );
 }
-

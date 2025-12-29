@@ -3,17 +3,18 @@ export interface BasicInfoData {
   email: string;
   phone: string;
   address: string;
+  city: string;
+  state: string;
+  pincode: string;
 }
 
 export interface PANDetailsData {
   pan_number: string;
-  pan_name: string;
 }
 
 export interface GSTInfoData {
   gst_status: 'registered' | 'not_registered' | '';
   gst_number: string;
-  gst_state: string;
 }
 
 export interface BankAccountData {
@@ -28,7 +29,6 @@ export interface BankAccountData {
 export interface MSMEStatusData {
   msme_status: 'yes' | 'no' | '';
   msme_number: string;
-  msme_category: string;
 }
 
 export interface OnboardingFormData {
@@ -38,6 +38,18 @@ export interface OnboardingFormData {
   bankAccount: BankAccountData;
   msmeStatus: MSMEStatusData;
   termsAccepted: boolean;
+}
+
+// Supplier data from ERPNext
+export interface SupplierApiData {
+  name: string;
+  supplier_name: string;
+  email_id: string | null;
+  mobile_no: string | null;
+  gstin: string | null;
+  pan: string | null;
+  gst_category: string | null;
+  primary_address: string | null;
 }
 
 export interface StepConfig {
@@ -62,15 +74,16 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     email: '',
     phone: '',
     address: '',
+    city: '',
+    state: '',
+    pincode: '',
   },
   panDetails: {
     pan_number: '',
-    pan_name: '',
   },
   gstInfo: {
     gst_status: '',
     gst_number: '',
-    gst_state: '',
   },
   bankAccount: {
     account_name: '',
@@ -83,42 +96,46 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
   msmeStatus: {
     msme_status: '',
     msme_number: '',
-    msme_category: '',
   },
   termsAccepted: false,
 };
 
 export const INDIAN_STATES = [
-  { value: 'AN', label: 'Andaman and Nicobar Islands' },
-  { value: 'AP', label: 'Andhra Pradesh' },
-  { value: 'AR', label: 'Arunachal Pradesh' },
-  { value: 'AS', label: 'Assam' },
-  { value: 'BR', label: 'Bihar' },
-  { value: 'CH', label: 'Chandigarh' },
-  { value: 'CT', label: 'Chhattisgarh' },
-  { value: 'DL', label: 'Delhi' },
-  { value: 'GA', label: 'Goa' },
-  { value: 'GJ', label: 'Gujarat' },
-  { value: 'HR', label: 'Haryana' },
-  { value: 'HP', label: 'Himachal Pradesh' },
-  { value: 'JK', label: 'Jammu and Kashmir' },
-  { value: 'JH', label: 'Jharkhand' },
-  { value: 'KA', label: 'Karnataka' },
-  { value: 'KL', label: 'Kerala' },
-  { value: 'MP', label: 'Madhya Pradesh' },
-  { value: 'MH', label: 'Maharashtra' },
-  { value: 'MN', label: 'Manipur' },
-  { value: 'ML', label: 'Meghalaya' },
-  { value: 'MZ', label: 'Mizoram' },
-  { value: 'NL', label: 'Nagaland' },
-  { value: 'OR', label: 'Odisha' },
-  { value: 'PB', label: 'Punjab' },
-  { value: 'RJ', label: 'Rajasthan' },
-  { value: 'SK', label: 'Sikkim' },
-  { value: 'TN', label: 'Tamil Nadu' },
-  { value: 'TG', label: 'Telangana' },
-  { value: 'TR', label: 'Tripura' },
-  { value: 'UP', label: 'Uttar Pradesh' },
-  { value: 'UK', label: 'Uttarakhand' },
-  { value: 'WB', label: 'West Bengal' },
+  { value: 'Andaman and Nicobar Islands', label: 'Andaman and Nicobar Islands', code: '35' },
+  { value: 'Andhra Pradesh', label: 'Andhra Pradesh', code: '37' },
+  { value: 'Arunachal Pradesh', label: 'Arunachal Pradesh', code: '12' },
+  { value: 'Assam', label: 'Assam', code: '18' },
+  { value: 'Bihar', label: 'Bihar', code: '10' },
+  { value: 'Chandigarh', label: 'Chandigarh', code: '04' },
+  { value: 'Chhattisgarh', label: 'Chhattisgarh', code: '22' },
+  { value: 'Dadra and Nagar Haveli', label: 'Dadra and Nagar Haveli', code: '26' },
+  { value: 'Daman and Diu', label: 'Daman and Diu', code: '25' },
+  { value: 'Delhi', label: 'Delhi', code: '07' },
+  { value: 'Goa', label: 'Goa', code: '30' },
+  { value: 'Gujarat', label: 'Gujarat', code: '24' },
+  { value: 'Haryana', label: 'Haryana', code: '06' },
+  { value: 'Himachal Pradesh', label: 'Himachal Pradesh', code: '02' },
+  { value: 'Jammu and Kashmir', label: 'Jammu and Kashmir', code: '01' },
+  { value: 'Jharkhand', label: 'Jharkhand', code: '20' },
+  { value: 'Karnataka', label: 'Karnataka', code: '29' },
+  { value: 'Kerala', label: 'Kerala', code: '32' },
+  { value: 'Ladakh', label: 'Ladakh', code: '38' },
+  { value: 'Lakshadweep', label: 'Lakshadweep', code: '31' },
+  { value: 'Madhya Pradesh', label: 'Madhya Pradesh', code: '23' },
+  { value: 'Maharashtra', label: 'Maharashtra', code: '27' },
+  { value: 'Manipur', label: 'Manipur', code: '14' },
+  { value: 'Meghalaya', label: 'Meghalaya', code: '17' },
+  { value: 'Mizoram', label: 'Mizoram', code: '15' },
+  { value: 'Nagaland', label: 'Nagaland', code: '13' },
+  { value: 'Odisha', label: 'Odisha', code: '21' },
+  { value: 'Puducherry', label: 'Puducherry', code: '34' },
+  { value: 'Punjab', label: 'Punjab', code: '03' },
+  { value: 'Rajasthan', label: 'Rajasthan', code: '08' },
+  { value: 'Sikkim', label: 'Sikkim', code: '11' },
+  { value: 'Tamil Nadu', label: 'Tamil Nadu', code: '33' },
+  { value: 'Telangana', label: 'Telangana', code: '36' },
+  { value: 'Tripura', label: 'Tripura', code: '16' },
+  { value: 'Uttar Pradesh', label: 'Uttar Pradesh', code: '09' },
+  { value: 'Uttarakhand', label: 'Uttarakhand', code: '05' },
+  { value: 'West Bengal', label: 'West Bengal', code: '19' },
 ];

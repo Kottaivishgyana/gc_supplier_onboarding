@@ -19,6 +19,7 @@ export function MSMEStatusStep() {
         <h1 className="text-3xl font-bold tracking-tight">MSME Status</h1>
         <p className="text-muted-foreground">
           If your business is registered under MSME, please provide the details.
+          This information helps in faster payment processing.
         </p>
       </div>
 
@@ -68,6 +69,9 @@ export function MSMEStatusStep() {
                   />
                   <Store className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Format: UDYAM-XX-00-0000000
+                </p>
               </div>
             )}
           </div>

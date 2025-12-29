@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Stepper } from '@/components/ui/onboarding/Stepper';
 import { MobileStepper } from '@/components/ui/onboarding/MobileStepper';
 import { StepNavigation } from '@/components/ui/onboarding/StepNavigation';
@@ -21,7 +22,22 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export function OnboardingPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { currentStep, formData, submitForm, resetForm } = useOnboardingStore();
+  const { 
+    currentStep, 
+    formData, 
+    submitForm, 
+    resetForm,
+    initializeFromUrl,
+    isLoading,
+    isSubmitting,
+    error,
+    supplierId,
+  } = useOnboardingStore();
+
+  // Initialize from URL params on mount
+  useEffect(() => {
+    initializeFromUrl();
+  }, [initializeFromUrl]);
 
   const validateCurrentStep = (): boolean => {
     switch (currentStep) {
@@ -42,17 +58,22 @@ export function OnboardingPage() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateReviewSubmit(formData.termsAccepted)) {
-      submitForm();
-      setShowSuccessModal(true);
-      console.log('Form submitted:', formData);
+      const result = await submitForm();
+      if (result.success) {
+        setShowSuccessModal(true);
+      } else {
+        alert(result.message || 'Failed to submit. Please try again.');
+      }
     }
   };
 
   const handleCloseModal = () => {
     setShowSuccessModal(false);
     resetForm();
+    // Redirect to a thank you page or close window
+    window.close();
   };
 
   const renderStep = () => {
@@ -74,6 +95,44 @@ export function OnboardingPage() {
     }
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6 flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            <p className="text-muted-foreground text-center">
+              Loading your onboarding form...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state (no supplier ID or API error)
+  if (error && !supplierId) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-bold text-center">Invalid Link</h2>
+            <p className="text-muted-foreground text-center">
+              {error}
+            </p>
+            <p className="text-sm text-muted-foreground text-center">
+              Please contact your administrator or use the link sent to your email.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <div className="flex flex-1 justify-center py-8 px-4 sm:px-6 lg:px-8">
@@ -86,13 +145,25 @@ export function OnboardingPage() {
             {/* Mobile Stepper */}
             <MobileStepper />
 
+            {/* Error Banner */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
             {/* Step Content */}
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
               {renderStep()}
             </div>
 
             {/* Navigation */}
-            <StepNavigation onNext={validateCurrentStep} onSubmit={handleSubmit} />
+            <StepNavigation 
+              onNext={validateCurrentStep} 
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+            />
           </main>
         </div>
       </div>
@@ -106,7 +177,7 @@ export function OnboardingPage() {
             </div>
             <DialogTitle className="text-2xl text-center">Application Submitted!</DialogTitle>
             <DialogDescription className="text-center">
-              Your KYC application has been submitted successfully. Our team will
+              Your onboarding application has been submitted successfully. Our team will
               review your documents and get back to you within 3-5 business days.
             </DialogDescription>
           </DialogHeader>
@@ -120,4 +191,3 @@ export function OnboardingPage() {
     </div>
   );
 }
-

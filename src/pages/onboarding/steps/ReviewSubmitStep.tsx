@@ -4,7 +4,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
-import { INDIAN_STATES } from '@/types/onboarding';
 
 interface ReviewSectionProps {
   title: string;
@@ -51,11 +50,6 @@ export function ReviewSubmitStep() {
   const { formData, goToStep, setTermsAccepted } = useOnboardingStore();
   const { basicInfo, panDetails, gstInfo, bankAccount, msmeStatus, termsAccepted } = formData;
 
-  const getStateName = (code: string) => {
-    const state = INDIAN_STATES.find((s) => s.value === code);
-    return state?.label || code;
-  };
-
   const maskAccountNumber = (num: string) => {
     if (num.length <= 4) return num;
     return '••••' + num.slice(-4);
@@ -66,7 +60,7 @@ export function ReviewSubmitStep() {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Review & Submit</h1>
         <p className="text-muted-foreground">
-          Please review all the information before submitting your KYC application.
+          Please review all the information before submitting your onboarding application.
         </p>
       </div>
 
@@ -83,6 +77,9 @@ export function ReviewSubmitStep() {
               <ReviewItem label="Email" value={basicInfo.email} />
               <ReviewItem label="Phone" value={basicInfo.phone} />
               <ReviewItem label="Address" value={basicInfo.address} />
+              <ReviewItem label="City" value={basicInfo.city} />
+              <ReviewItem label="State" value={basicInfo.state} />
+              <ReviewItem label="PIN Code" value={basicInfo.pincode} />
             </ReviewSection>
 
             {/* PAN Details */}
@@ -92,7 +89,6 @@ export function ReviewSubmitStep() {
               onEdit={() => goToStep(2)}
             >
               <ReviewItem label="PAN Number" value={panDetails.pan_number} />
-              <ReviewItem label="Name on PAN" value={panDetails.pan_name} />
             </ReviewSection>
 
             {/* GST Info */}
@@ -108,7 +104,6 @@ export function ReviewSubmitStep() {
               {gstInfo.gst_status === 'registered' && (
                 <ReviewItem label="GSTIN" value={gstInfo.gst_number} />
               )}
-              <ReviewItem label="State" value={getStateName(gstInfo.gst_state)} />
             </ReviewSection>
 
             {/* Bank Account */}
@@ -171,4 +166,3 @@ export function validateReviewSubmit(termsAccepted: boolean): boolean {
   }
   return true;
 }
-

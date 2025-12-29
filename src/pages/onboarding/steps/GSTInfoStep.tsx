@@ -3,15 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useOnboardingStore } from '@/stores/onboardingStore';
-import { INDIAN_STATES } from '@/types/onboarding';
 
 export function GSTInfoStep() {
   const { formData, updateGSTInfo } = useOnboardingStore();
@@ -82,28 +74,6 @@ export function GSTInfoStep() {
                 </p>
               </div>
             )}
-
-            {/* GST State */}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="gst_state">
-                State of Registration <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={gstInfo.gst_state}
-                onValueChange={(value) => updateGSTInfo({ gst_state: value })}
-              >
-                <SelectTrigger className="h-14">
-                  <SelectValue placeholder="Select State" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INDIAN_STATES.map((state) => (
-                    <SelectItem key={state.value} value={state.value}>
-                      {state.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -114,7 +84,6 @@ export function GSTInfoStep() {
 export function validateGSTInfo(data: {
   gst_status: string;
   gst_number: string;
-  gst_state: string;
 }): boolean {
   if (!data.gst_status) {
     alert('Please select GST registration status');
@@ -126,10 +95,6 @@ export function validateGSTInfo(data: {
   }
   if (data.gst_status === 'registered' && data.gst_number.length !== 15) {
     alert('GSTIN must be 15 characters');
-    return false;
-  }
-  if (!data.gst_state) {
-    alert('Please select state of registration');
     return false;
   }
   return true;

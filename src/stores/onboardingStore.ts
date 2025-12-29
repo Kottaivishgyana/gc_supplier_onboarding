@@ -6,13 +6,20 @@ import type {
   GSTInfoData,
   BankAccountData,
   MSMEStatusData,
+  SupplierApiData,
 } from '@/types/onboarding';
 import { INITIAL_FORM_DATA } from '@/types/onboarding';
+import { getSupplier, submitOnboardingData } from '@/services/erpnextApi';
 
 interface OnboardingStore {
   currentStep: number;
   formData: OnboardingFormData;
   isSubmitted: boolean;
+  isLoading: boolean;
+  isSubmitting: boolean;
+  error: string | null;
+  supplierId: string | null;
+  supplierData: SupplierApiData | null;
   
   // Navigation
   nextStep: () => void;
@@ -27,15 +34,22 @@ interface OnboardingStore {
   updateMSMEStatus: (data: Partial<MSMEStatusData>) => void;
   setTermsAccepted: (accepted: boolean) => void;
   
-  // Actions
-  submitForm: () => void;
+  // API Actions
+  initializeFromUrl: () => Promise<void>;
+  submitForm: () => Promise<{ success: boolean; message: string }>;
   resetForm: () => void;
+  setError: (error: string | null) => void;
 }
 
-export const useOnboardingStore = create<OnboardingStore>((set) => ({
+export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   currentStep: 1,
   formData: INITIAL_FORM_DATA,
   isSubmitted: false,
+  isLoading: false,
+  isSubmitting: false,
+  error: null,
+  supplierId: null,
+  supplierData: null,
 
   nextStep: () => set((state) => ({
     currentStep: Math.min(state.currentStep + 1, 6),
@@ -88,12 +102,95 @@ export const useOnboardingStore = create<OnboardingStore>((set) => ({
     formData: { ...state.formData, termsAccepted: accepted },
   })),
 
-  submitForm: () => set({ isSubmitted: true }),
+  setError: (error) => set({ error }),
+
+  initializeFromUrl: async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const supplierId = urlParams.get('supplier');
+
+    if (!supplierId) {
+      set({ error: 'No supplier ID provided. Please use the link sent to your email.' });
+      return;
+    }
+
+    set({ isLoading: true, error: null, supplierId });
+
+    try {
+      const supplierData = await getSupplier(supplierId);
+      
+      // Pre-fill form with existing supplier data
+      const gstStatus: 'registered' | 'not_registered' | '' = 
+        supplierData.gst_category === 'Registered Regular' || 
+        supplierData.gst_category === 'Registered Composition' 
+          ? 'registered' 
+          : supplierData.gst_category === 'Unregistered' 
+            ? 'not_registered' 
+            : '';
+
+      set((state) => ({
+        supplierData,
+        formData: {
+          ...state.formData,
+          basicInfo: {
+            ...state.formData.basicInfo,
+            company_name: supplierData.supplier_name || '',
+            email: supplierData.email_id || '',
+            phone: supplierData.mobile_no || '',
+          },
+          panDetails: {
+            pan_number: supplierData.pan || '',
+          },
+          gstInfo: {
+            gst_status: gstStatus,
+            gst_number: supplierData.gstin || '',
+          },
+        },
+        isLoading: false,
+      }));
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to load supplier data',
+      });
+    }
+  },
+
+  submitForm: async () => {
+    const { supplierId, formData } = get();
+
+    if (!supplierId) {
+      return { success: false, message: 'No supplier ID found' };
+    }
+
+    set({ isSubmitting: true, error: null });
+
+    try {
+      const result = await submitOnboardingData(supplierId, {
+        basicInfo: formData.basicInfo,
+        panDetails: formData.panDetails,
+        gstInfo: formData.gstInfo,
+        bankAccount: formData.bankAccount,
+      });
+
+      if (result.success) {
+        set({ isSubmitted: true, isSubmitting: false });
+      } else {
+        set({ error: result.message, isSubmitting: false });
+      }
+
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Submission failed';
+      set({ error: message, isSubmitting: false });
+      return { success: false, message };
+    }
+  },
 
   resetForm: () => set({
     currentStep: 1,
     formData: INITIAL_FORM_DATA,
     isSubmitted: false,
+    isSubmitting: false,
+    error: null,
   }),
 }));
-

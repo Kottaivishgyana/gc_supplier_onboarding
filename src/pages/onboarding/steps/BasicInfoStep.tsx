@@ -3,7 +3,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { INDIAN_STATES } from '@/types/onboarding';
 
 export function BasicInfoStep() {
   const { formData, updateBasicInfo } = useOnboardingStore();
@@ -85,13 +93,67 @@ export function BasicInfoStep() {
               <div className="relative">
                 <Textarea
                   id="address"
-                  placeholder="Enter full registered office address"
+                  placeholder="Enter street address"
                   value={basicInfo.address}
                   onChange={(e) => updateBasicInfo({ address: e.target.value })}
-                  className="pr-12 min-h-[100px] resize-none"
+                  className="pr-12 min-h-[80px] resize-none"
                 />
                 <MapPin className="absolute right-4 top-4 w-5 h-5 text-muted-foreground pointer-events-none" />
               </div>
+            </div>
+
+            {/* City */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="city">
+                City <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="city"
+                placeholder="Enter city"
+                value={basicInfo.city}
+                onChange={(e) => updateBasicInfo({ city: e.target.value })}
+                className="h-14"
+              />
+            </div>
+
+            {/* State */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="state">
+                State <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={basicInfo.state}
+                onValueChange={(value) => updateBasicInfo({ state: value })}
+              >
+                <SelectTrigger className="h-14">
+                  <SelectValue placeholder="Select State" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDIAN_STATES.map((state) => (
+                    <SelectItem key={state.value} value={state.value}>
+                      {state.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pincode */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pincode">
+                PIN Code <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="pincode"
+                placeholder="Enter 6-digit PIN code"
+                value={basicInfo.pincode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  updateBasicInfo({ pincode: value });
+                }}
+                maxLength={6}
+                className="h-14"
+              />
             </div>
           </div>
         </CardContent>
@@ -105,6 +167,9 @@ export function validateBasicInfo(data: {
   email: string;
   phone: string;
   address: string;
+  city: string;
+  state: string;
+  pincode: string;
 }): boolean {
   if (!data.company_name.trim()) {
     alert('Please enter supplier name');
@@ -122,6 +187,17 @@ export function validateBasicInfo(data: {
     alert('Please enter registered address');
     return false;
   }
+  if (!data.city.trim()) {
+    alert('Please enter city');
+    return false;
+  }
+  if (!data.state) {
+    alert('Please select state');
+    return false;
+  }
+  if (!data.pincode.trim() || data.pincode.length !== 6) {
+    alert('Please enter a valid 6-digit PIN code');
+    return false;
+  }
   return true;
 }
-
