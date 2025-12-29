@@ -14,8 +14,12 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { INDIAN_STATES } from '@/types/onboarding';
 
 export function BasicInfoStep() {
-  const { formData, updateBasicInfo } = useOnboardingStore();
+  const { formData, updateBasicInfo, supplierData } = useOnboardingStore();
   const { basicInfo } = formData;
+  
+  // Fields are read-only if pre-filled from ERPNext
+  const isSupplierNameReadOnly = !!supplierData?.supplier_name;
+  const isEmailReadOnly = !!supplierData?.email_id;
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,10 +47,16 @@ export function BasicInfoStep() {
                   onChange={(e) =>
                     updateBasicInfo({ company_name: e.target.value })
                   }
-                  className="pr-12 h-14"
+                  readOnly={isSupplierNameReadOnly}
+                  className={`pr-12 h-14 ${isSupplierNameReadOnly ? 'bg-muted cursor-not-allowed' : ''}`}
                 />
                 <Building2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
               </div>
+              {isSupplierNameReadOnly && (
+                <p className="text-sm text-muted-foreground">
+                  This field is pre-filled and cannot be edited
+                </p>
+              )}
             </div>
 
             {/* Email */}
@@ -61,10 +71,16 @@ export function BasicInfoStep() {
                   placeholder="Enter official email address"
                   value={basicInfo.email}
                   onChange={(e) => updateBasicInfo({ email: e.target.value })}
-                  className="pr-12 h-14"
+                  readOnly={isEmailReadOnly}
+                  className={`pr-12 h-14 ${isEmailReadOnly ? 'bg-muted cursor-not-allowed' : ''}`}
                 />
                 <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
               </div>
+              {isEmailReadOnly && (
+                <p className="text-sm text-muted-foreground">
+                  This field is pre-filled and cannot be edited
+                </p>
+              )}
             </div>
 
             {/* Phone */}

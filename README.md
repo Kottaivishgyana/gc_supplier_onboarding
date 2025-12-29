@@ -46,15 +46,11 @@ This portal is designed to streamline the vendor onboarding process for Frappe E
 
 ### Step 2: Configure CORS
 
-Add your frontend domain to the allowed origins. In your site's `site_config.json`:
+Add your frontend domain to the allowed origins.
 
-```json
-{
-  "allow_cors": "*"
-}
-```
-
-Or for production, specify exact domains:
+**For Frappe Cloud:**
+1. Go to **Frappe Cloud Dashboard** → Your site → **Site Config**
+2. Add this configuration:
 
 ```json
 {
@@ -62,10 +58,19 @@ Or for production, specify exact domains:
 }
 ```
 
-After updating, run:
+**For Self-hosted (bench):**
 
 ```bash
+bench --site your-site.com set-config allow_cors "https://gc-supplier-onboarding-git-main-kottai-samy-ks-projects.vercel.app"
 bench restart
+```
+
+**For development (allow all origins):**
+
+```json
+{
+  "allow_cors": "*"
+}
 ```
 
 ### Step 3: Create Custom Fields (Optional - for MSME)
@@ -95,29 +100,22 @@ DocType: Supplier
 Event: After Insert
 ```
 
-3. Add the script (copy exactly as shown - no imports needed in Server Scripts):
+3. Add the script (copy from `frappe-server-script.txt` or paste below):
 
 ```python
 if doc.email_id:
-    onboarding_url = "https://gc-supplier-onboarding-git-main-kottai-samy-ks-projects.vercel.app/?supplier=" + frappe.utils.quote(doc.name)
+    supplier_name_encoded = doc.name.replace(" ", "%20")
+    onboarding_url = "https://gc-supplier-onboarding-git-main-kottai-samy-ks-projects.vercel.app/?supplier=" + supplier_name_encoded
     
     subject = "Complete Your Vendor Onboarding - Geri Care"
     
-    message = """
-    <p>Dear {supplier_name},</p>
-    
-    <p>Welcome to Geri Care! You have been registered as a supplier in our system.</p>
-    
-    <p>Please complete your onboarding by providing additional details through the link below:</p>
-    
-    <p><a href="{url}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Onboarding</a></p>
-    
-    <p>This link is unique to your account. Please do not share it with others.</p>
-    
-    <p>If you have any questions, please contact our procurement team.</p>
-    
-    <p>Best regards,<br>Geri Care Hospital</p>
-    """.format(supplier_name=doc.supplier_name, url=onboarding_url)
+    message = "<p>Dear " + doc.supplier_name + ",</p>"
+    message += "<p>Welcome to Geri Care! You have been registered as a supplier in our system.</p>"
+    message += "<p>Please complete your onboarding by providing additional details through the link below:</p>"
+    message += '<p><a href="' + onboarding_url + '" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Onboarding</a></p>'
+    message += "<p>This link is unique to your account. Please do not share it with others.</p>"
+    message += "<p>If you have any questions, please contact our procurement team.</p>"
+    message += "<p>Best regards,<br>Geri Care Hospital</p>"
     
     frappe.sendmail(
         recipients=[doc.email_id],
@@ -127,7 +125,10 @@ if doc.email_id:
     )
 ```
 
-> **Important**: In Frappe Server Scripts, `frappe` and `doc` are automatically available. Do NOT add `import frappe` or define functions.
+> **Important**: In Frappe Server Scripts:
+> - `frappe` and `doc` are automatically available - do NOT import
+> - Do NOT use `.format()` - it's blocked by safe_exec
+> - Do NOT use `frappe.utils.quote()` - use string replace instead
 
 ### Step 5: Configure Notification (Alternative to Server Script)
 

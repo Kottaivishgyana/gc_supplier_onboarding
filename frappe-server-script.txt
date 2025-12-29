@@ -1,0 +1,20 @@
+if doc.email_id:
+    supplier_name_encoded = doc.name.replace(" ", "%20")
+    onboarding_url = "https://gc-supplier-onboarding-git-main-kottai-samy-ks-projects.vercel.app/?supplier=" + supplier_name_encoded
+    
+    subject = "Complete Your Vendor Onboarding - Geri Care"
+    
+    message = "<p>Dear " + doc.supplier_name + ",</p>"
+    message += "<p>Welcome to Geri Care! You have been registered as a supplier in our system.</p>"
+    message += "<p>Please complete your onboarding by providing additional details through the link below:</p>"
+    message += '<p><a href="' + onboarding_url + '" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Onboarding</a></p>'
+    message += "<p>This link is unique to your account. Please do not share it with others.</p>"
+    message += "<p>If you have any questions, please contact our procurement team.</p>"
+    message += "<p>Best regards,<br>Geri Care Hospital</p>"
+    
+    frappe.sendmail(
+        recipients=[doc.email_id],
+        subject=subject,
+        message=message,
+        now=True
+    )
