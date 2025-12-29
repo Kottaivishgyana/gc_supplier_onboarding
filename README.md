@@ -95,35 +95,29 @@ DocType: Supplier
 Event: After Insert
 ```
 
-3. Add the script:
+3. Add the script (copy exactly as shown - no imports needed in Server Scripts):
 
 ```python
-# Server Script: Send Onboarding Email
-import frappe
-
-def send_onboarding_email():
-    if not doc.email_id:
-        return
-    
-    onboarding_url = f"https://gc-supplier-onboarding-git-main-kottai-samy-ks-projects.vercel.app/?supplier={frappe.utils.quote(doc.name)}"
+if doc.email_id:
+    onboarding_url = "https://gc-supplier-onboarding-git-main-kottai-samy-ks-projects.vercel.app/?supplier=" + frappe.utils.quote(doc.name)
     
     subject = "Complete Your Vendor Onboarding - Geri Care"
     
-    message = f"""
-    <p>Dear {doc.supplier_name},</p>
+    message = """
+    <p>Dear {supplier_name},</p>
     
     <p>Welcome to Geri Care! You have been registered as a supplier in our system.</p>
     
     <p>Please complete your onboarding by providing additional details through the link below:</p>
     
-    <p><a href="{onboarding_url}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Onboarding</a></p>
+    <p><a href="{url}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Onboarding</a></p>
     
     <p>This link is unique to your account. Please do not share it with others.</p>
     
     <p>If you have any questions, please contact our procurement team.</p>
     
     <p>Best regards,<br>Geri Care Hospital</p>
-    """
+    """.format(supplier_name=doc.supplier_name, url=onboarding_url)
     
     frappe.sendmail(
         recipients=[doc.email_id],
@@ -131,9 +125,9 @@ def send_onboarding_email():
         message=message,
         now=True
     )
-
-send_onboarding_email()
 ```
+
+> **Important**: In Frappe Server Scripts, `frappe` and `doc` are automatically available. Do NOT add `import frappe` or define functions.
 
 ### Step 5: Configure Notification (Alternative to Server Script)
 
