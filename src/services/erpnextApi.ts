@@ -5,7 +5,7 @@
  */
 
 // API Configuration - Update these values for your ERPNext instance
-const RAW_API_URL = import.meta.env.VITE_ERPNEXT_API_URL || 'https://your-erpnext-site.com';
+const RAW_API_URL = import.meta.env.VITE_ERPNEXT_API_URL ;
 // Remove trailing slash to avoid double slashes in URLs
 const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
 const API_KEY = import.meta.env.VITE_ERPNEXT_API_KEY || '';
