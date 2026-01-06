@@ -1,8 +1,10 @@
-import { Building2, Mail, Phone, MapPin } from 'lucide-react';
+import { useMemo } from 'react';
+import { Building2, Mail, Phone, MapPin, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -12,10 +14,29 @@ import {
 } from '@/components/ui/select';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { INDIAN_STATES } from '@/types/onboarding';
+import { validatePincodeForState } from '@/utils/pincodeValidator';
 
 export function BasicInfoStep() {
   const { formData, updateBasicInfo, supplierData } = useOnboardingStore();
   const { basicInfo } = formData;
+  
+  // Validate PIN code when state or pincode changes
+  const pincodeError = useMemo(() => {
+    if (basicInfo.pincode.length === 6 && basicInfo.state) {
+      const validation = validatePincodeForState(basicInfo.pincode, basicInfo.state);
+      return validation.isValid ? '' : validation.message;
+    }
+    return '';
+  }, [basicInfo.pincode, basicInfo.state]);
+
+  // Validate billing PIN code when billing state or billing pincode changes
+  const billingPincodeError = useMemo(() => {
+    if (basicInfo.billing_pincode.length === 6 && basicInfo.billing_state) {
+      const validation = validatePincodeForState(basicInfo.billing_pincode, basicInfo.billing_state);
+      return validation.isValid ? '' : validation.message;
+    }
+    return '';
+  }, [basicInfo.billing_pincode, basicInfo.billing_state]);
   
   // Fields are read-only if pre-filled from ERPNext
   const isSupplierNameReadOnly = !!supplierData?.supplier_name;
@@ -101,6 +122,25 @@ export function BasicInfoStep() {
               </div>
             </div>
 
+            {/* Business Type */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="business_type">
+                Business Type <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={basicInfo.business_type}
+                onValueChange={(value) => updateBasicInfo({ business_type: value })}
+              >
+                <SelectTrigger className="h-14">
+                  <SelectValue placeholder="Select Business Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Supplier">Supplier</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Address */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="address">
@@ -168,9 +208,120 @@ export function BasicInfoStep() {
                   updateBasicInfo({ pincode: value });
                 }}
                 maxLength={6}
-                className="h-14"
+                className={`h-14 ${pincodeError ? 'border-destructive' : ''}`}
+                aria-invalid={!!pincodeError}
               />
+              {pincodeError && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{pincodeError}</span>
+                </div>
+              )}
             </div>
+
+            {/* Billing Address Different Checkbox */}
+            <div className="flex items-center gap-3 pt-2">
+              <Checkbox
+                id="billing_address_different"
+                checked={basicInfo.billing_address_different}
+                onCheckedChange={(checked) =>
+                  updateBasicInfo({ billing_address_different: checked === true })
+                }
+              />
+              <Label
+                htmlFor="billing_address_different"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Billing address is different from registered address
+              </Label>
+            </div>
+
+            {/* Billing Address Fields - Show only if checkbox is checked */}
+            {basicInfo.billing_address_different && (
+              <>
+                <div className="border-t pt-6 mt-2">
+                  <h3 className="text-lg font-semibold mb-4">Billing Address</h3>
+                </div>
+
+                {/* Billing Address */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="billing_address">
+                    Billing Address <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Textarea
+                      id="billing_address"
+                      placeholder="Enter billing street address"
+                      value={basicInfo.billing_address}
+                      onChange={(e) => updateBasicInfo({ billing_address: e.target.value })}
+                      className="pr-12 min-h-[80px] resize-none"
+                    />
+                    <MapPin className="absolute right-4 top-4 w-5 h-5 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Billing City */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="billing_city">
+                    City <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="billing_city"
+                    placeholder="Enter city"
+                    value={basicInfo.billing_city}
+                    onChange={(e) => updateBasicInfo({ billing_city: e.target.value })}
+                    className="h-14"
+                  />
+                </div>
+
+                {/* Billing State */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="billing_state">
+                    State <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={basicInfo.billing_state}
+                    onValueChange={(value) => updateBasicInfo({ billing_state: value })}
+                  >
+                    <SelectTrigger className="h-14">
+                      <SelectValue placeholder="Select State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDIAN_STATES.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>
+                          {state.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Billing Pincode */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="billing_pincode">
+                    PIN Code <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="billing_pincode"
+                    placeholder="Enter 6-digit PIN code"
+                    value={basicInfo.billing_pincode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      updateBasicInfo({ billing_pincode: value });
+                    }}
+                    maxLength={6}
+                    className={`h-14 ${billingPincodeError ? 'border-destructive' : ''}`}
+                    aria-invalid={!!billingPincodeError}
+                  />
+                  {billingPincodeError && (
+                    <div className="flex items-center gap-2 text-sm text-destructive">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{billingPincodeError}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -182,10 +333,16 @@ export function validateBasicInfo(data: {
   company_name: string;
   email: string;
   phone: string;
+  business_type: string;
   address: string;
   city: string;
   state: string;
   pincode: string;
+  billing_address_different: boolean;
+  billing_address: string;
+  billing_city: string;
+  billing_state: string;
+  billing_pincode: string;
 }): boolean {
   if (!data.company_name.trim()) {
     alert('Please enter supplier name');
@@ -197,6 +354,10 @@ export function validateBasicInfo(data: {
   }
   if (!data.phone.trim()) {
     alert('Please enter phone number');
+    return false;
+  }
+  if (!data.business_type) {
+    alert('Please select business type');
     return false;
   }
   if (!data.address.trim()) {
@@ -215,5 +376,40 @@ export function validateBasicInfo(data: {
     alert('Please enter a valid 6-digit PIN code');
     return false;
   }
+  
+  // Validate PIN code matches state
+  const pincodeValidation = validatePincodeForState(data.pincode, data.state);
+  if (!pincodeValidation.isValid) {
+    alert(pincodeValidation.message);
+    return false;
+  }
+  
+  // Validate billing address if different
+  if (data.billing_address_different) {
+    if (!data.billing_address.trim()) {
+      alert('Please enter billing address');
+      return false;
+    }
+    if (!data.billing_city.trim()) {
+      alert('Please enter billing city');
+      return false;
+    }
+    if (!data.billing_state) {
+      alert('Please select billing state');
+      return false;
+    }
+    if (!data.billing_pincode.trim() || data.billing_pincode.length !== 6) {
+      alert('Please enter a valid 6-digit billing PIN code');
+      return false;
+    }
+    
+    // Validate billing PIN code matches billing state
+    const billingPincodeValidation = validatePincodeForState(data.billing_pincode, data.billing_state);
+    if (!billingPincodeValidation.isValid) {
+      alert(billingPincodeValidation.message);
+      return false;
+    }
+  }
+  
   return true;
 }

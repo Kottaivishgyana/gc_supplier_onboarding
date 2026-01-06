@@ -17,6 +17,9 @@ import { PANDetailsStep, validatePANDetails } from './steps/PANDetailsStep';
 import { GSTInfoStep, validateGSTInfo } from './steps/GSTInfoStep';
 import { BankAccountStep, validateBankAccount } from './steps/BankAccountStep';
 import { MSMEStatusStep, validateMSMEStatus } from './steps/MSMEStatusStep';
+import { DrugLicenseStep, validateDrugLicense } from './steps/DrugLicenseStep';
+import { ContactInformationStep, validateContactInformation } from './steps/ContactInformationStep';
+import { CommercialDetailsStep, validateCommercialDetails } from './steps/CommercialDetailsStep';
 import { ReviewSubmitStep, validateReviewSubmit } from './steps/ReviewSubmitStep';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
@@ -44,14 +47,20 @@ export function OnboardingPage() {
       case 1:
         return validateBasicInfo(formData.basicInfo);
       case 2:
-        return validatePANDetails(formData.panDetails);
+        return validateContactInformation(formData.contactInformation);
       case 3:
-        return validateGSTInfo(formData.gstInfo);
+        return validatePANDetails(formData.panDetails);
       case 4:
-        return validateBankAccount(formData.bankAccount);
+        return validateGSTInfo(formData.gstInfo);
       case 5:
-        return validateMSMEStatus(formData.msmeStatus);
+        return validateBankAccount(formData.bankAccount);
       case 6:
+        return validateMSMEStatus(formData.msmeStatus);
+      case 7:
+        return validateDrugLicense(formData.drugLicense);
+      case 8:
+        return validateCommercialDetails(formData.commercialDetails);
+      case 9:
         return validateReviewSubmit(formData.termsAccepted);
       default:
         return true;
@@ -81,14 +90,20 @@ export function OnboardingPage() {
       case 1:
         return <BasicInfoStep />;
       case 2:
-        return <PANDetailsStep />;
+        return <ContactInformationStep />;
       case 3:
-        return <GSTInfoStep />;
+        return <PANDetailsStep />;
       case 4:
-        return <BankAccountStep />;
+        return <GSTInfoStep />;
       case 5:
-        return <MSMEStatusStep />;
+        return <BankAccountStep />;
       case 6:
+        return <MSMEStatusStep />;
+      case 7:
+        return <DrugLicenseStep />;
+      case 8:
+        return <CommercialDetailsStep />;
+      case 9:
         return <ReviewSubmitStep />;
       default:
         return <BasicInfoStep />;

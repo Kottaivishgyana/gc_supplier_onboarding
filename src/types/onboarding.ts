@@ -2,19 +2,27 @@ export interface BasicInfoData {
   company_name: string;
   email: string;
   phone: string;
+  business_type: string;
   address: string;
   city: string;
   state: string;
   pincode: string;
+  billing_address_different: boolean;
+  billing_address: string;
+  billing_city: string;
+  billing_state: string;
+  billing_pincode: string;
 }
 
 export interface PANDetailsData {
   pan_number: string;
+  pan_document?: File | null;
 }
 
 export interface GSTInfoData {
   gst_status: 'registered' | 'not_registered' | '';
   gst_number: string;
+  gst_document?: File | null;
 }
 
 export interface BankAccountData {
@@ -31,12 +39,44 @@ export interface MSMEStatusData {
   msme_number: string;
 }
 
+export interface DrugLicenseData {
+  drug_license_number: string;
+  drug_license_document?: File | null;
+}
+
+export interface ContactInformationData {
+  transaction_name: string;
+  transaction_contact: string;
+  transaction_email: string;
+  escalation_name: string;
+  escalation_role: 'hod' | 'proprietor' | 'head' | '';
+  escalation_contact: string;
+  escalation_email: string;
+}
+
+export interface CommercialDetailsData {
+  credit_days: string;
+  delivery: string;
+  discount_basis: 'pts' | 'ptr' | 'mrp' | '';
+  invoice_discount_type: 'on_invoice' | 'off_invoice' | '';
+  invoice_discount_percentage: string;
+  is_authorized_distributor: 'yes' | 'no' | '';
+  authorized_documents?: File[];
+  return_non_moving: string;
+  return_short_expiry_percentage: string;
+  return_damage_type: 'replacement' | '100_cn' | '';
+  return_expired_percentage: string;
+}
+
 export interface OnboardingFormData {
   basicInfo: BasicInfoData;
   panDetails: PANDetailsData;
   gstInfo: GSTInfoData;
   bankAccount: BankAccountData;
   msmeStatus: MSMEStatusData;
+  drugLicense: DrugLicenseData;
+  contactInformation: ContactInformationData;
+  commercialDetails: CommercialDetailsData;
   termsAccepted: boolean;
 }
 
@@ -61,11 +101,14 @@ export interface StepConfig {
 
 export const STEPS: StepConfig[] = [
   { id: 1, title: 'Basic Info', description: 'Company details', icon: 'badge' },
-  { id: 2, title: 'PAN Details', description: 'Tax verification', icon: 'id_card' },
-  { id: 3, title: 'GST Info', description: 'GST registration', icon: 'receipt_long' },
-  { id: 4, title: 'Bank Account', description: 'Payment details', icon: 'account_balance' },
-  { id: 5, title: 'MSME Status', description: 'Enterprise category', icon: 'store' },
-  { id: 6, title: 'Review & Submit', description: 'Final review', icon: 'send' },
+  { id: 2, title: 'Contact Information', description: 'Contact details', icon: 'contact_mail' },
+  { id: 3, title: 'PAN Details', description: 'Tax verification', icon: 'id_card' },
+  { id: 4, title: 'GST Info', description: 'GST registration', icon: 'receipt_long' },
+  { id: 5, title: 'Bank Account', description: 'Payment details', icon: 'account_balance' },
+  { id: 6, title: 'MSME Status', description: 'Enterprise category', icon: 'store' },
+  { id: 7, title: 'Drug License', description: 'License information', icon: 'medical_services' },
+  { id: 8, title: 'Commercial Details', description: 'Commercial terms', icon: 'receipt' },
+  { id: 9, title: 'Review & Submit', description: 'Final review', icon: 'send' },
 ];
 
 export const INITIAL_FORM_DATA: OnboardingFormData = {
@@ -73,17 +116,25 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     company_name: '',
     email: '',
     phone: '',
+    business_type: '',
     address: '',
     city: '',
     state: '',
     pincode: '',
+    billing_address_different: false,
+    billing_address: '',
+    billing_city: '',
+    billing_state: '',
+    billing_pincode: '',
   },
   panDetails: {
     pan_number: '',
+    pan_document: null,
   },
   gstInfo: {
     gst_status: '',
     gst_number: '',
+    gst_document: null,
   },
   bankAccount: {
     account_name: '',
@@ -96,6 +147,31 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
   msmeStatus: {
     msme_status: '',
     msme_number: '',
+  },
+  drugLicense: {
+    drug_license_number: '',
+    drug_license_document: null,
+  },
+  contactInformation: {
+    transaction_name: '',
+    transaction_contact: '',
+    transaction_email: '',
+    escalation_name: '',
+    escalation_role: '',
+    escalation_contact: '',
+    escalation_email: '',
+  },
+  commercialDetails: {
+    credit_days: '45',
+    delivery: 'At our works at your cost',
+    discount_basis: '',
+    invoice_discount_type: '',
+    invoice_discount_percentage: '',
+    is_authorized_distributor: '',
+    return_non_moving: '100',
+    return_short_expiry_percentage: '',
+    return_damage_type: '',
+    return_expired_percentage: '',
   },
   termsAccepted: false,
 };

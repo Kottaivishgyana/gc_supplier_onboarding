@@ -6,6 +6,9 @@ import type {
   GSTInfoData,
   BankAccountData,
   MSMEStatusData,
+  DrugLicenseData,
+  ContactInformationData,
+  CommercialDetailsData,
   SupplierApiData,
 } from '@/types/onboarding';
 import { INITIAL_FORM_DATA } from '@/types/onboarding';
@@ -32,6 +35,9 @@ interface OnboardingStore {
   updateGSTInfo: (data: Partial<GSTInfoData>) => void;
   updateBankAccount: (data: Partial<BankAccountData>) => void;
   updateMSMEStatus: (data: Partial<MSMEStatusData>) => void;
+  updateDrugLicense: (data: Partial<DrugLicenseData>) => void;
+  updateContactInformation: (data: Partial<ContactInformationData>) => void;
+  updateCommercialDetails: (data: Partial<CommercialDetailsData>) => void;
   setTermsAccepted: (accepted: boolean) => void;
   
   // API Actions
@@ -52,7 +58,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   supplierData: null,
 
   nextStep: () => set((state) => ({
-    currentStep: Math.min(state.currentStep + 1, 6),
+    currentStep: Math.min(state.currentStep + 1, 9),
   })),
 
   prevStep: () => set((state) => ({
@@ -60,7 +66,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   })),
 
   goToStep: (step: number) => set({
-    currentStep: Math.min(Math.max(step, 1), 6),
+    currentStep: Math.min(Math.max(step, 1), 9),
   }),
 
   updateBasicInfo: (data) => set((state) => ({
@@ -95,6 +101,27 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     formData: {
       ...state.formData,
       msmeStatus: { ...state.formData.msmeStatus, ...data },
+    },
+  })),
+
+  updateDrugLicense: (data) => set((state) => ({
+    formData: {
+      ...state.formData,
+      drugLicense: { ...state.formData.drugLicense, ...data },
+    },
+  })),
+
+  updateContactInformation: (data) => set((state) => ({
+    formData: {
+      ...state.formData,
+      contactInformation: { ...state.formData.contactInformation, ...data },
+    },
+  })),
+
+  updateCommercialDetails: (data) => set((state) => ({
+    formData: {
+      ...state.formData,
+      commercialDetails: { ...state.formData.commercialDetails, ...data },
     },
   })),
 
@@ -170,6 +197,9 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         panDetails: formData.panDetails,
         gstInfo: formData.gstInfo,
         bankAccount: formData.bankAccount,
+        drugLicense: formData.drugLicense,
+        contactInformation: formData.contactInformation,
+        commercialDetails: formData.commercialDetails,
       });
 
       if (result.success) {

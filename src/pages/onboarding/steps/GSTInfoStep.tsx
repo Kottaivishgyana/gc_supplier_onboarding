@@ -1,7 +1,8 @@
-import { FileText } from 'lucide-react';
+import { FileText, Upload, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
@@ -54,25 +55,75 @@ export function GSTInfoStep() {
 
             {/* GST Number (shown only if registered) */}
             {gstInfo.gst_status === 'registered' && (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="gst_number">
-                  GSTIN <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="gst_number"
-                    placeholder="22AAAAA0000A1Z5"
-                    value={gstInfo.gst_number}
-                    onChange={(e) => handleGSTNumberChange(e.target.value)}
-                    maxLength={15}
-                    className="pr-12 h-14 uppercase"
-                  />
-                  <FileText className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+              <>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="gst_number">
+                    GSTIN <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="gst_number"
+                      placeholder="22AAAAA0000A1Z5"
+                      value={gstInfo.gst_number}
+                      onChange={(e) => handleGSTNumberChange(e.target.value)}
+                      maxLength={15}
+                      className="pr-12 h-14 uppercase"
+                    />
+                    <FileText className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    15-character GST Identification Number
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  15-character GST Identification Number
-                </p>
-              </div>
+
+                {/* GST Document Upload */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="gst_document">
+                    Upload GST Certificate <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex flex-col gap-3">
+                    {gstInfo.gst_document ? (
+                      <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-muted-foreground" />
+                          <span className="text-sm font-medium">{gstInfo.gst_document.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({(gstInfo.gst_document.size / 1024).toFixed(2)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => updateGSTInfo({ gst_document: null })}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Input
+                          id="gst_document"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              updateGSTInfo({ gst_document: file });
+                            }
+                          }}
+                          className="h-14 cursor-pointer"
+                        />
+                        <Upload className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Upload PDF, JPG, or PNG file (Max 5MB)
+                    </p>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </CardContent>
@@ -84,18 +135,29 @@ export function GSTInfoStep() {
 export function validateGSTInfo(data: {
   gst_status: string;
   gst_number: string;
+  gst_document?: File | null;
 }): boolean {
   if (!data.gst_status) {
     alert('Please select GST registration status');
     return false;
   }
-  if (data.gst_status === 'registered' && !data.gst_number.trim()) {
-    alert('Please enter GSTIN');
-    return false;
-  }
-  if (data.gst_status === 'registered' && data.gst_number.length !== 15) {
-    alert('GSTIN must be 15 characters');
-    return false;
+  if (data.gst_status === 'registered') {
+    if (!data.gst_number.trim()) {
+      alert('Please enter GSTIN');
+      return false;
+    }
+    if (data.gst_number.length !== 15) {
+      alert('GSTIN must be 15 characters');
+      return false;
+    }
+    if (!data.gst_document) {
+      alert('Please upload GST certificate');
+      return false;
+    }
+    if (data.gst_document.size > 5 * 1024 * 1024) {
+      alert('GST document size should be less than 5MB');
+      return false;
+    }
   }
   return true;
 }

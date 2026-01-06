@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { STEPS } from '@/types/onboarding';
 
 interface StepNavigationProps {
   onNext: () => boolean;
@@ -11,7 +12,7 @@ interface StepNavigationProps {
 export function StepNavigation({ onNext, onSubmit, isSubmitting }: StepNavigationProps) {
   const { currentStep, nextStep, prevStep } = useOnboardingStore();
   const isFirstStep = currentStep === 1;
-  const isLastStep = currentStep === 6;
+  const isLastStep = currentStep === STEPS.length;
 
   const handleNext = () => {
     if (onNext()) {
