@@ -55,23 +55,46 @@ export function MSMEStatusStep() {
 
             {/* MSME Fields (shown only if Yes) */}
             {msmeStatus.msme_status === 'yes' && (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="msme_number">
-                  Udyam Registration Number <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="msme_number"
-                    placeholder="UDYAM-XX-00-0000000"
-                    value={msmeStatus.msme_number}
-                    onChange={(e) => handleMSMENumberChange(e.target.value)}
-                    className="pr-12 h-14 uppercase"
-                  />
-                  <Store className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+              <div className="flex flex-col gap-6">
+                {/* Udyam Number */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="msme_number">
+                    Udyam Registration Number <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="msme_number"
+                      placeholder="UDYAM-XX-00-0000000"
+                      value={msmeStatus.msme_number}
+                      onChange={(e) => handleMSMENumberChange(e.target.value)}
+                      className="pr-12 h-14 uppercase"
+                    />
+                    <Store className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Format: UDYAM-XX-00-0000000
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Format: UDYAM-XX-00-0000000
-                </p>
+
+                {/* MSME Certificate Upload */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="msme_document">
+                    Upload MSME / Udyam Certificate
+                  </Label>
+                  <Input
+                    id="msme_document"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      updateMSMEStatus({ msme_document: file });
+                    }}
+                    className="h-14 cursor-pointer"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Upload PDF, JPG, or PNG file (Max 5MB)
+                  </p>
+                </div>
               </div>
             )}
           </div>

@@ -1,9 +1,11 @@
-import { Calendar, Truck, Percent, FileText, RotateCcw } from 'lucide-react';
+import { Calendar, Truck, Percent, FileText, RotateCcw, Plus, X, Upload } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import type { AuthorizedDistributorItem } from '@/types/onboarding';
 
 export function CommercialDetailsStep() {
   const { formData, updateCommercialDetails } = useOnboardingStore();
@@ -84,24 +86,24 @@ export function CommercialDetailsStep() {
               <RadioGroup
                 value={commercialDetails.discount_basis}
                 onValueChange={(value) =>
-                  updateCommercialDetails({ discount_basis: value as 'pts' | 'ptr' | 'mrp' })
+                  updateCommercialDetails({ discount_basis: value as 'PTS' | 'PTR' | 'MRP' })
                 }
                 className="flex gap-6"
               >
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value="pts" id="discount_pts" />
+                  <RadioGroupItem value="PTS" id="discount_pts" />
                   <Label htmlFor="discount_pts" className="font-normal cursor-pointer">
                     On PTS
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value="ptr" id="discount_ptr" />
+                  <RadioGroupItem value="PTR" id="discount_ptr" />
                   <Label htmlFor="discount_ptr" className="font-normal cursor-pointer">
                     On PTR
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value="mrp" id="discount_mrp" />
+                  <RadioGroupItem value="MRP" id="discount_mrp" />
                   <Label htmlFor="discount_mrp" className="font-normal cursor-pointer">
                     On MRP
                   </Label>
@@ -118,18 +120,18 @@ export function CommercialDetailsStep() {
                 <RadioGroup
                   value={commercialDetails.invoice_discount_type}
                   onValueChange={(value) =>
-                    updateCommercialDetails({ invoice_discount_type: value as 'on_invoice' | 'off_invoice' })
+                    updateCommercialDetails({ invoice_discount_type: value as 'On Invoice' | 'Off Invoice' })
                   }
                   className="flex gap-6"
                 >
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="on_invoice" id="invoice_on" />
+                    <RadioGroupItem value="On Invoice" id="invoice_on" />
                     <Label htmlFor="invoice_on" className="font-normal cursor-pointer">
                       On Invoice
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="off_invoice" id="invoice_off" />
+                    <RadioGroupItem value="Off Invoice" id="invoice_off" />
                     <Label htmlFor="invoice_off" className="font-normal cursor-pointer">
                       Off Invoice
                     </Label>
@@ -169,48 +171,140 @@ export function CommercialDetailsStep() {
               </Label>
               <RadioGroup
                 value={commercialDetails.is_authorized_distributor}
-                onValueChange={(value) =>
-                  updateCommercialDetails({ is_authorized_distributor: value as 'yes' | 'no' })
-                }
+                onValueChange={(value) => {
+                  const isYes = value === 'Yes';
+                  updateCommercialDetails({ 
+                    is_authorized_distributor: value as 'Yes' | 'No',
+                    authorized_distributors: isYes && (!commercialDetails.authorized_distributors || commercialDetails.authorized_distributors.length === 0)
+                      ? [{ manufacturer_name: '', document: null }]
+                      : !isYes ? [] : commercialDetails.authorized_distributors
+                  });
+                }}
                 className="flex gap-6"
               >
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value="yes" id="authorized_yes" />
+                  <RadioGroupItem value="Yes" id="authorized_yes" />
                   <Label htmlFor="authorized_yes" className="font-normal cursor-pointer">
                     Yes
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <RadioGroupItem value="no" id="authorized_no" />
+                  <RadioGroupItem value="No" id="authorized_no" />
                   <Label htmlFor="authorized_no" className="font-normal cursor-pointer">
                     No
                   </Label>
                 </div>
               </RadioGroup>
-              {commercialDetails.is_authorized_distributor === 'yes' && (
-                <div className="flex flex-col gap-2 ml-4 mt-2">
-                  <Label htmlFor="authorized_documents" className="text-sm">
+              {commercialDetails.is_authorized_distributor === 'Yes' && (
+                <div className="flex flex-col gap-4 ml-4 mt-2">
+                  <Label className="text-sm font-medium">
                     Attach List of manufacturers who authorized yourself and a sample invoice copy of each
                   </Label>
-                  <div className="relative">
-                    <Input
-                      id="authorized_documents"
-                      type="file"
-                      multiple
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => {
-                        const files = e.target.files;
-                        if (files) {
-                          // Handle file upload - you may want to upload to server first
-                          updateCommercialDetails({ authorized_documents: Array.from(files) });
-                        }
-                      }}
-                      className="h-14"
-                    />
-                    <FileText className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                  
+                  <div className="flex flex-col gap-3">
+                    {(commercialDetails.authorized_distributors || []).map((item, index) => (
+                      <div key={index} className="flex gap-3 items-start p-4 border rounded-lg bg-muted/30">
+                        <div className="flex-1">
+                          <Label htmlFor={`manufacturer_name_${index}`} className="text-xs text-muted-foreground mb-1 block">
+                            Manufacturer Name
+                          </Label>
+                          <Input
+                            id={`manufacturer_name_${index}`}
+                            placeholder="Enter manufacturer name"
+                            value={item.manufacturer_name || ''}
+                            onChange={(e) => {
+                              const updated = [...(commercialDetails.authorized_distributors || [])];
+                              updated[index] = { ...updated[index], manufacturer_name: e.target.value };
+                              updateCommercialDetails({ authorized_distributors: updated });
+                            }}
+                            className="h-10"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Label htmlFor={`manufacturer_file_${index}`} className="text-xs text-muted-foreground mb-1 block">
+                            Upload Document
+                          </Label>
+                          <div className="relative">
+                            {item.document ? (
+                              <div className="flex items-center justify-between p-2 border rounded bg-background">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-sm truncate">{item.document.name}</span>
+                                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                                    ({(item.document.size / 1024).toFixed(2)} KB)
+                                  </span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = [...(commercialDetails.authorized_distributors || [])];
+                                    updated[index] = { ...updated[index], document: null };
+                                    updateCommercialDetails({ authorized_distributors: updated });
+                                  }}
+                                  className="h-8 w-8 p-0 ml-2 flex-shrink-0"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <Input
+                                  id={`manufacturer_file_${index}`}
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const updated = [...(commercialDetails.authorized_distributors || [])];
+                                      updated[index] = { ...updated[index], document: file };
+                                      updateCommercialDetails({ authorized_distributors: updated });
+                                    }
+                                  }}
+                                  className="h-10 cursor-pointer"
+                                />
+                                <Upload className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const updated = [...(commercialDetails.authorized_distributors || [])];
+                            updated.splice(index, 1);
+                            updateCommercialDetails({ authorized_distributors: updated });
+                          }}
+                          className="h-10 w-10 p-0 mt-6 flex-shrink-0"
+                          disabled={(commercialDetails.authorized_distributors || []).length === 1}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const current = commercialDetails.authorized_distributors || [];
+                      updateCommercialDetails({
+                        authorized_distributors: [...current, { manufacturer_name: '', document: null }]
+                      });
+                    }}
+                    className="w-fit gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Manufacturer
+                  </Button>
+
                   <p className="text-xs text-muted-foreground">
-                    Upload PDF, JPG, or PNG files (multiple files allowed)
+                    Upload PDF, JPG, or PNG files for each manufacturer (Max 5MB per file)
                   </p>
                 </div>
               )}
@@ -277,18 +371,18 @@ export function CommercialDetailsStep() {
                 <RadioGroup
                   value={commercialDetails.return_damage_type}
                   onValueChange={(value) =>
-                    updateCommercialDetails({ return_damage_type: value as 'replacement' | '100_cn' })
+                    updateCommercialDetails({ return_damage_type: value as 'Replacement' | '100% CN' })
                   }
                   className="flex gap-6"
                 >
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="replacement" id="damage_replacement" />
+                    <RadioGroupItem value="Replacement" id="damage_replacement" />
                     <Label htmlFor="damage_replacement" className="font-normal cursor-pointer">
                       Replacement
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioGroupItem value="100_cn" id="damage_100cn" />
+                    <RadioGroupItem value="100% CN" id="damage_100cn" />
                     <Label htmlFor="damage_100cn" className="font-normal cursor-pointer">
                       100% CN
                     </Label>
@@ -338,6 +432,7 @@ export function validateCommercialDetails(data: {
   invoice_discount_type: string;
   invoice_discount_percentage: string;
   is_authorized_distributor: string;
+  authorized_distributors?: AuthorizedDistributorItem[];
   return_non_moving: string;
   return_short_expiry_percentage: string;
   return_damage_type: string;
@@ -363,6 +458,27 @@ export function validateCommercialDetails(data: {
   if (!data.is_authorized_distributor) {
     alert('Please select if you are a Manufacturer\'s Authorized distributor');
     return false;
+  }
+  if (data.is_authorized_distributor === 'Yes') {
+    if (!data.authorized_distributors || data.authorized_distributors.length === 0) {
+      alert('Please add at least one manufacturer with authorized distributor details');
+      return false;
+    }
+    for (let i = 0; i < data.authorized_distributors.length; i++) {
+      const item = data.authorized_distributors[i];
+      if (!item.manufacturer_name.trim()) {
+        alert(`Please enter manufacturer name for item ${i + 1}`);
+        return false;
+      }
+      if (!item.document) {
+        alert(`Please upload document for ${item.manufacturer_name || `item ${i + 1}`}`);
+        return false;
+      }
+      if (item.document.size > 5 * 1024 * 1024) {
+        alert(`Document for ${item.manufacturer_name} exceeds 5MB limit`);
+        return false;
+      }
+    }
   }
   if (!data.return_short_expiry_percentage.trim()) {
     alert('Please enter return percentage for short expiry items');

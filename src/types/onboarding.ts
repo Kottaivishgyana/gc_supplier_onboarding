@@ -37,6 +37,7 @@ export interface BankAccountData {
 export interface MSMEStatusData {
   msme_status: 'yes' | 'no' | '';
   msme_number: string;
+  msme_document?: File | null;
 }
 
 export interface DrugLicenseData {
@@ -54,17 +55,22 @@ export interface ContactInformationData {
   escalation_email: string;
 }
 
+export interface AuthorizedDistributorItem {
+  manufacturer_name: string;
+  document?: File | null;
+}
+
 export interface CommercialDetailsData {
   credit_days: string;
   delivery: string;
-  discount_basis: 'pts' | 'ptr' | 'mrp' | '';
-  invoice_discount_type: 'on_invoice' | 'off_invoice' | '';
+  discount_basis: 'PTS' | 'PTR' | 'MRP' | '';
+  invoice_discount_type: 'On Invoice' | 'Off Invoice' | '';
   invoice_discount_percentage: string;
-  is_authorized_distributor: 'yes' | 'no' | '';
-  authorized_documents?: File[];
+  is_authorized_distributor: 'Yes' | 'No' | '';
+  authorized_distributors?: AuthorizedDistributorItem[];
   return_non_moving: string;
   return_short_expiry_percentage: string;
-  return_damage_type: 'replacement' | '100_cn' | '';
+  return_damage_type: 'Replacement' | '100% CN' | '';
   return_expired_percentage: string;
 }
 
@@ -147,6 +153,7 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
   msmeStatus: {
     msme_status: '',
     msme_number: '',
+    msme_document: null,
   },
   drugLicense: {
     drug_license_number: '',
@@ -168,6 +175,7 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     invoice_discount_type: '',
     invoice_discount_percentage: '',
     is_authorized_distributor: '',
+    authorized_distributors: [],
     return_non_moving: '100',
     return_short_expiry_percentage: '',
     return_damage_type: '',

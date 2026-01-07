@@ -66,7 +66,17 @@ interface SupplierUpdatePayload {
   // Document attachments
   custom_pan_img?: string;
   custom_gst_img?: string;
-  custom_drug_licence_img?: string; // Note: spelling is "licence" 
+  custom_drug_licence_img?: string; // Note: spelling is "licence"
+  // Authorized distributors (Child Table)
+  custom_authorized_distributors?: Array<{
+    manufacturer_name: string;
+    document: string; // File URL
+  }>;
+  // Verification Status
+  custom_verification_status?: string;
+  // MSME / Udyam
+  custom_msme__udyam_number?: string;
+  custom_msme_certificate_?: string;
 }
 
 interface AddressPayload {
@@ -201,6 +211,183 @@ export async function updateSupplier(
 
   const result: ApiResponse<SupplierData> = await response.json();
   return result.data as SupplierData;
+}
+
+/**
+ * Link an existing Website User (portal user) to the Supplier's Portal Users child table.
+ * Assumes the User (with given email) is already created by the signup process.
+ */
+export async function linkSupplierPortalUser(
+  supplierName: string,
+  userEmail: string | null | undefined
+): Promise<void> {
+  const email = (userEmail || '').trim();
+  if (!email) return;
+
+  try {
+    // Create Portal User row linking this supplier to the existing User
+    const payload = {
+      doctype: 'Portal User',
+      parenttype: 'Supplier',
+      parentfield: 'portal_users',
+      parent: supplierName,
+      user: email,
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/resource/Portal User`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      // If portal user already exists, ERPNext may throw; log and continue
+      console.warn('Failed to create Portal User link:', error);
+    }
+  } catch (error) {
+    console.error('Error while linking portal user to supplier:', error);
+  }
+}
+
+/**
+ * Update authorized distributors child table entries
+ * This function handles creating/updating child table entries for authorized distributors
+ */
+export async function updateAuthorizedDistributors(
+  supplierName: string,
+  distributors: Array<{ manufacturer_name: string; document_url: string }>
+): Promise<void> {
+  // First, get the current supplier to check existing child table entries
+  const supplierResponse = await fetch(
+    `${API_BASE_URL}/api/resource/Supplier/${encodeURIComponent(supplierName)}`,
+    {
+      method: 'GET',
+      headers: getHeaders(),
+    }
+  );
+
+  if (!supplierResponse.ok) {
+    throw new Error('Failed to fetch supplier data');
+  }
+
+  const supplierData = await supplierResponse.json();
+  const existingEntries = supplierData.data?.custom_authorized_distributors || [];
+
+  // Delete existing entries if any
+  for (const entry of existingEntries) {
+    if (entry.name) {
+      try {
+        await fetch(
+          `${API_BASE_URL}/api/resource/Authorized Distributor/${encodeURIComponent(entry.name)}`,
+          {
+            method: 'DELETE',
+            headers: getHeaders(),
+          }
+        );
+      } catch (error) {
+        console.warn('Failed to delete existing authorized distributor entry:', error);
+      }
+    }
+  }
+
+  // Create new entries
+  for (const distributor of distributors) {
+    if (distributor.manufacturer_name) {
+      const payload = {
+        doctype: 'Authorized Distributor',
+        parent: supplierName,
+        parenttype: 'Supplier',
+        parentfield: 'custom_authorized_distributors',
+        manufacturer_name: distributor.manufacturer_name,
+        document: distributor.document_url || '',
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/resource/Authorized Distributor`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error(`Failed to create authorized distributor entry for ${distributor.manufacturer_name}:`, error);
+        // Continue with other entries even if one fails
+      }
+    }
+  }
+}
+
+/**
+ * Update bank account child table entries in Supplier
+ * This function handles creating/updating child table entries for bank accounts
+ */
+export async function updateSupplierBankAccounts(
+  supplierName: string,
+  bankAccountData: {
+    account_holder_name: string;
+    account_number: string;
+    ifsc_code: string;
+    bank_name: string;
+    branch_name: string;
+  }
+): Promise<void> {
+  // First, get the current supplier to check existing child table entries
+  const supplierResponse = await fetch(
+    `${API_BASE_URL}/api/resource/Supplier/${encodeURIComponent(supplierName)}`,
+    {
+      method: 'GET',
+      headers: getHeaders(),
+    }
+  );
+
+  if (!supplierResponse.ok) {
+    throw new Error('Failed to fetch supplier data');
+  }
+
+  const supplierData = await supplierResponse.json();
+  const existingEntries = supplierData.data?.custom_bank_account_details || [];
+
+  // Delete existing entries if any
+  for (const entry of existingEntries) {
+    if (entry.name) {
+      try {
+        await fetch(
+          `${API_BASE_URL}/api/resource/Supplier Bank Account/${encodeURIComponent(entry.name)}`,
+          {
+            method: 'DELETE',
+            headers: getHeaders(),
+          }
+        );
+      } catch (error) {
+        console.warn('Failed to delete existing bank account entry:', error);
+      }
+    }
+  }
+
+  // Create new bank account entry
+  const payload = {
+    doctype: 'Supplier Bank Account',
+    parent: supplierName,
+    parenttype: 'Supplier',
+    parentfield: 'custom_bank_account_details',
+    account_holder_name: bankAccountData.account_holder_name,
+    account_number: bankAccountData.account_number,
+    ifsc_code: bankAccountData.ifsc_code.toUpperCase(),
+    bank_name: bankAccountData.bank_name,
+    branch_name: bankAccountData.branch_name,
+  };
+
+  const response = await fetch(`${API_BASE_URL}/api/resource/Supplier Bank Account`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.exception || `Failed to create bank account entry: ${response.statusText}`);
+  }
 }
 
 /**
@@ -396,6 +583,11 @@ export async function submitOnboardingData(
       drug_license_number: string;
       drug_license_document?: File | null;
     };
+    msmeStatus?: {
+      msme_status: string;
+      msme_number: string;
+      msme_document?: File | null;
+    };
     contactInformation?: {
       transaction_name: string;
       transaction_contact: string;
@@ -408,13 +600,17 @@ export async function submitOnboardingData(
     commercialDetails?: {
       credit_days: string;
       delivery: string;
-      discount_basis: 'pts' | 'ptr' | 'mrp' | '';
-      invoice_discount_type: 'on_invoice' | 'off_invoice' | '';
+      discount_basis: 'PTS' | 'PTR' | 'MRP' | '';
+      invoice_discount_type: 'On Invoice' | 'Off Invoice' | '';
       invoice_discount_percentage: string;
-      is_authorized_distributor: 'yes' | 'no' | '';
+      is_authorized_distributor: 'Yes' | 'No' | '';
+      authorized_distributors?: Array<{
+        manufacturer_name: string;
+        document?: File | null;
+      }>;
       return_non_moving: string;
       return_short_expiry_percentage: string;
-      return_damage_type: 'replacement' | '100_cn' | '';
+      return_damage_type: 'Replacement' | '100% CN' | '';
       return_expired_percentage: string;
     };
   }
@@ -451,6 +647,44 @@ export async function submitOnboardingData(
       }
     }
 
+    // Upload MSME / Udyam certificate
+    if (formData.msmeStatus?.msme_document) {
+      try {
+        const msmeFileUrl = await uploadFile(formData.msmeStatus.msme_document, supplierName, 'Home/Attachments');
+        fileUploads.msme_document = msmeFileUrl;
+      } catch (error) {
+        console.error('Failed to upload MSME document:', error);
+      }
+    }
+
+    // Upload authorized distributor documents
+    const authorizedDistributorData: Array<{ manufacturer_name: string; document_url: string }> = [];
+    if (formData.commercialDetails?.is_authorized_distributor === 'Yes' && formData.commercialDetails.authorized_distributors) {
+      for (let i = 0; i < formData.commercialDetails.authorized_distributors.length; i++) {
+        const item = formData.commercialDetails.authorized_distributors[i];
+        if (item.document) {
+          try {
+            const fileUrl = await uploadFile(
+              item.document, 
+              supplierName, 
+              'Home/Attachments'
+            );
+            authorizedDistributorData.push({
+              manufacturer_name: item.manufacturer_name,
+              document_url: fileUrl
+            });
+          } catch (error) {
+            console.error(`Failed to upload authorized distributor document for ${item.manufacturer_name}:`, error);
+            // Still add the manufacturer name even if file upload fails
+            authorizedDistributorData.push({
+              manufacturer_name: item.manufacturer_name,
+              document_url: ''
+            });
+          }
+        }
+      }
+    }
+
     // 2. Update supplier main document with all form data
     const supplierPayload: SupplierUpdatePayload = {
       supplier_name: formData.basicInfo.company_name,
@@ -466,6 +700,10 @@ export async function submitOnboardingData(
       }),
       ...(formData.drugLicense?.drug_license_number && {
         custom_drug_license_no: formData.drugLicense.drug_license_number,
+      }),
+      // MSME / Udyam
+      ...(formData.msmeStatus && formData.msmeStatus.msme_status === 'yes' && {
+        custom_msme__udyam_number: formData.msmeStatus.msme_number || '',
       }),
       // Contact Information - Transaction
       ...(formData.contactInformation && {
@@ -501,11 +739,41 @@ export async function submitOnboardingData(
       ...(fileUploads.drug_license_document && {
         custom_drug_licence_img: fileUploads.drug_license_document,
       }),
+      ...(fileUploads.msme_document && {
+        custom_msme_certificate_: fileUploads.msme_document,
+      }),
+      // Set verification status to "Pending for verification" when form is submitted
+      custom_verification_status: 'Pending for verification',
     };
 
     await updateSupplier(supplierName, supplierPayload);
 
-    // 2. Create registered address (always created as primary)
+    // 3. Ensure portal user link is created for this supplier
+    // Use the basic info email (same as signup email) as the portal user id
+    try {
+      await linkSupplierPortalUser(supplierName, formData.basicInfo.email);
+    } catch (error) {
+      console.error('Failed to link portal user for supplier:', error);
+    }
+
+    // 4. Update authorized distributors child table if applicable
+    if (formData.commercialDetails?.is_authorized_distributor === 'Yes' && authorizedDistributorData.length > 0) {
+      try {
+        await updateAuthorizedDistributors(supplierName, authorizedDistributorData);
+      } catch (error) {
+        console.error('Failed to update authorized distributors:', error);
+        // Continue with submission even if child table update fails
+      }
+    } else if (formData.commercialDetails?.is_authorized_distributor === 'No') {
+      // 5. Clear existing entries if user selected "No"
+      try {
+        await updateAuthorizedDistributors(supplierName, []);
+      } catch (error) {
+        console.error('Failed to clear authorized distributors:', error);
+      }
+    }
+
+    // 3. Create registered address (always created as primary)
     await createAddress(
       supplierName,
       {
@@ -518,7 +786,7 @@ export async function submitOnboardingData(
       true
     );
 
-    // 3. Create billing address if different from registered address
+    // 4. Create billing address if different from registered address
     if (formData.basicInfo.billing_address_different) {
       await createAddress(
         supplierName,
@@ -533,8 +801,27 @@ export async function submitOnboardingData(
       );
     }
 
-    // 4. Create bank account
-    await createBankAccount(supplierName, formData.bankAccount);
+    // 5. Create bank account (separate Bank Account doctype for ERPNext accounting)
+    try {
+      await createBankAccount(supplierName, formData.bankAccount);
+    } catch (error) {
+      console.error('Failed to create Bank Account doctype:', error);
+      // Continue even if this fails
+    }
+
+    // 6. Update bank account child table in Supplier
+    try {
+      await updateSupplierBankAccounts(supplierName, {
+        account_holder_name: formData.bankAccount.account_name,
+        account_number: formData.bankAccount.account_number,
+        ifsc_code: formData.bankAccount.ifsc_code,
+        bank_name: formData.bankAccount.bank_name,
+        branch_name: formData.bankAccount.branch_name,
+      });
+    } catch (error) {
+      console.error('Failed to update bank account child table:', error);
+      // Continue even if this fails
+    }
 
     return {
       success: true,

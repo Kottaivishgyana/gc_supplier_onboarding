@@ -27,12 +27,53 @@ This guide covers two main sections:
 - `custom_invoice_discount_type` - Invoice discount type (On Invoice or Off Invoice)
 - `custom_invoice_discount_percentage` - Invoice discount percentage
 - `custom_is_authorized_distributor` - Is Manufacturer's Authorized distributor (Yes/No)
+- `custom_authorized_distributors` - Child Table field for storing multiple manufacturer entries with documents
 - `custom_return_non_moving` - Return policy for non-moving items (default: "100")
 - `custom_return_short_expiry_percentage` - Return percentage for short expiry items
 - `custom_return_damage_type` - Return policy for damaged items (Replacement or 100% CN)
 - `custom_return_expired_percentage` - Return percentage for expired items
 
+### Verification Status Field
+- `custom_verification_status` - Verification status of the supplier onboarding process
+  - Options: "Initiated", "Pending for verification", "Verified", "Rejected", "Changes Required"
+  - Default: "Initiated" (set when supplier is created)
+  - Updated to "Pending for verification" when user submits onboarding form
+  - Updated by admin: "Verified", "Rejected", or "Changes Required"
+
 ## Steps to Add Custom Fields in ERPNext
+
+### Step 0: Create Child Table Doctype for Authorized Distributors
+
+Before adding the custom field to Supplier, you need to create a Child Table doctype:
+
+1. **Create New DocType**
+   - Go to: **Customize → DocType → New**
+   - Or search for "DocType" in the search bar
+
+2. **DocType Settings**
+   - **Name:** `Authorized Distributor`
+   - **Module:** Select your custom app or "Custom"
+   - **Is Child Table:** ✅ Check this checkbox (IMPORTANT)
+   - Click **Save**
+
+3. **Add Fields to Child Table**
+   - Click **Add Row** in the Fields section
+   - Add the following fields:
+
+   **Field 1: Manufacturer Name**
+   - **Field Name:** `manufacturer_name`
+   - **Label:** `Manufacturer Name`
+   - **Field Type:** `Data`
+   - **Required:** ✅ Yes
+
+   **Field 2: Document**
+   - **Field Name:** `document`
+   - **Label:** `Document`
+   - **Field Type:** `Attach`
+   - **Required:** ✅ Yes
+
+4. **Save the DocType**
+   - Click **Save** and then **Submit**
 
 ### Method 1: Using Customize Form (Recommended)
 
@@ -100,6 +141,23 @@ This guide covers two main sections:
       - Click **"Add"**
 
    **Note:** If you don't see an "Insert After" field in the UI, that's normal. You can add all fields first, then drag and drop them to reorder in the form layout.
+
+   **h. Verification Status (IMPORTANT - Add this first, after supplier_name)**
+      - Field Name: `custom_verification_status`
+      - Label: `Verification Status`
+      - Field Type: `Select`
+      - Options: 
+        ```
+        Initiated
+        Pending for verification
+        Verified
+        Rejected
+        Changes Required
+        ```
+        (Each option on a new line)
+      - Default: `Initiated`
+      - Insert After: `supplier_name` (This places it right after the supplier name field)
+      - Click **"Add"**
 
 4. **Organize Fields into Sections**
 
@@ -366,11 +424,19 @@ If you prefer to add fields programmatically or via JSON, you can use the follow
       "insert_after": "custom_invoice_discount_percentage"
     },
     {
+      "fieldname": "custom_authorized_distributors",
+      "label": "Authorized Distributors",
+      "fieldtype": "Table",
+      "options": "Authorized Distributor",
+      "description": "List of manufacturers who authorized this distributor with sample invoice copies",
+      "insert_after": "custom_is_authorized_distributor"
+    },
+    {
       "fieldname": "custom_return_non_moving",
       "label": "Return Policy - Non moving",
       "fieldtype": "Data",
       "default": "100",
-      "insert_after": "custom_is_authorized_distributor"
+      "insert_after": "custom_authorized_distributors"
     },
     {
       "fieldname": "custom_return_short_expiry_percentage",
@@ -390,6 +456,15 @@ If you prefer to add fields programmatically or via JSON, you can use the follow
       "label": "Return Policy - Expired %",
       "fieldtype": "Float",
       "insert_after": "custom_return_damage_type"
+    },
+    {
+      "fieldname": "custom_verification_status",
+      "label": "Verification Status",
+      "fieldtype": "Select",
+      "options": "Initiated\nPending for verification\nVerified\nRejected\nChanges Required",
+      "default": "Initiated",
+      "read_only": 0,
+      "insert_after": "supplier_name"
     },
     {
       "fieldname": "custom_pan_document",
@@ -529,11 +604,20 @@ def after_migrate():
             "doctype": "Supplier"
         },
         {
+            "fieldname": "custom_authorized_distributors",
+            "label": "Authorized Distributors",
+            "fieldtype": "Table",
+            "options": "Authorized Distributor",
+            "description": "List of manufacturers who authorized this distributor with sample invoice copies",
+            "insert_after": "custom_is_authorized_distributor",
+            "doctype": "Supplier"
+        },
+        {
             "fieldname": "custom_return_non_moving",
             "label": "Return Policy - Non moving",
             "fieldtype": "Data",
             "default": "100",
-            "insert_after": "custom_is_authorized_distributor",
+            "insert_after": "custom_authorized_distributors",
             "doctype": "Supplier"
         },
         {
@@ -556,6 +640,16 @@ def after_migrate():
             "label": "Return Policy - Expired %",
             "fieldtype": "Float",
             "insert_after": "custom_return_damage_type",
+            "doctype": "Supplier"
+        },
+        {
+            "fieldname": "custom_verification_status",
+            "label": "Verification Status",
+            "fieldtype": "Select",
+            "options": "Initiated\nPending for verification\nVerified\nRejected\nChanges Required",
+            "default": "Initiated",
+            "read_only": 0,
+            "insert_after": "supplier_name",
             "doctype": "Supplier"
         }
     ]
