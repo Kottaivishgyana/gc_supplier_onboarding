@@ -837,6 +837,54 @@ export async function submitOnboardingData(
 }
 
 /**
+ * Check if a user exists in Frappe ERPNext
+ * Returns true if user exists, false otherwise
+ * Directly queries user by email in URL path for fastest response
+ */
+export async function checkUserExists(email: string): Promise<boolean> {
+  try {
+    // Use the same API credentials for authentication
+    if (!API_KEY || !API_SECRET) {
+      console.warn('API credentials not configured for user check');
+      return false;
+    }
+
+    if (!API_BASE_URL) {
+      console.warn('API URL not configured for user check');
+      return false;
+    }
+
+    // Query user directly by email in URL path - fastest method
+    const encodedEmail = encodeURIComponent(email);
+    const response = await fetch(
+      `${API_BASE_URL}/api/resource/User/${encodedEmail}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+        mode: 'cors',
+        credentials: 'omit',
+
+      }
+    );
+
+    // 200 OK means user exists, 404 means user doesn't exist
+    if (response.status === 200) {
+      return true;
+    } else if (response.status === 404) {
+      return false;
+    } else {
+      // Other status codes - log and assume user doesn't exist
+      console.warn('Failed to check user existence:', response.statusText);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error checking user existence:', error);
+    // On error, assume user doesn't exist to allow signup
+    return false;
+  }
+}
+
+/**
  * Create a new user in Frappe ERPNext
  */
 interface CreateUserPayload {
