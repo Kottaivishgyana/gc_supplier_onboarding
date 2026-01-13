@@ -138,15 +138,45 @@ export function ReviewSubmitStep() {
               <ReviewItem label="Transaction Contact" value={contactInformation.transaction_contact} />
               <ReviewItem label="Transaction Email" value={contactInformation.transaction_email} />
               <div className="col-span-2 mt-2">
-                <p className="text-sm font-semibold mb-2 text-muted-foreground">For Escalation</p>
+                <p className="text-sm font-semibold mb-2 text-muted-foreground">For Additional Communication</p>
               </div>
-              <ReviewItem label="Escalation Name" value={contactInformation.escalation_name} />
+              <ReviewItem label="Additional Communication Name" value={contactInformation.escalation_name} />
               <ReviewItem 
-                label="Escalation Role" 
+                label="HOD/Proprietor/Head" 
                 value={formatEscalationRole(contactInformation.escalation_role)} 
               />
-              <ReviewItem label="Escalation Contact" value={contactInformation.escalation_contact} />
-              <ReviewItem label="Escalation Email" value={contactInformation.escalation_email} />
+              <ReviewItem label="Additional Communication Contact" value={contactInformation.escalation_contact} />
+              <ReviewItem label="Additional Communication Email" value={contactInformation.escalation_email} />
+              <div className="col-span-2 mt-2">
+                <p className="text-sm font-semibold mb-2 text-muted-foreground">For Additional Communication</p>
+              </div>
+              <ReviewItem label="Additional Communication Name" value={contactInformation.additional_contact2_name} />
+              <ReviewItem 
+                label="HOD/Proprietor/Head" 
+                value={formatEscalationRole(contactInformation.additional_contact2_role)} 
+              />
+              <ReviewItem label="Additional Communication Contact" value={contactInformation.additional_contact2} />
+              <ReviewItem label="Additional Communication Email" value={contactInformation.additional_contact2_email} />
+              {contactInformation.additional_contact_name && (
+                <>
+                  <div className="col-span-2 mt-2">
+                    <p className="text-sm font-semibold mb-2 text-muted-foreground">For Additional Communication (Optional)</p>
+                  </div>
+                  <ReviewItem label="Additional Communication Name (Optional)" value={contactInformation.additional_contact_name} />
+                  {contactInformation.additional_contact_role && (
+                    <ReviewItem 
+                      label="HOD/Proprietor/Head" 
+                      value={formatEscalationRole(contactInformation.additional_contact_role)} 
+                    />
+                  )}
+                  {contactInformation.additional_contact && (
+                    <ReviewItem label="Additional Communication Contact (Optional)" value={contactInformation.additional_contact} />
+                  )}
+                  {contactInformation.additional_contact_email && (
+                    <ReviewItem label="Additional Communication Email (Optional)" value={contactInformation.additional_contact_email} />
+                  )}
+                </>
+              )}
             </ReviewSection>
 
             {/* PAN Details */}

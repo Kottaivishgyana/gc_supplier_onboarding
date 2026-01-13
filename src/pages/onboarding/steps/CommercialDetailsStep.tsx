@@ -49,7 +49,7 @@ export function CommercialDetailsStep() {
                 <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
               </div>
               <p className="text-sm text-muted-foreground">
-                This field is pre-filled and cannot be edited
+              This field can't be modified. Please contact Geri Care for any modifications.
               </p>
             </div>
 

@@ -47,11 +47,21 @@ interface SupplierUpdatePayload {
   custom_transaction_contact_name?: string;
   custom_transaction_contact?: string;
   custom_transaction_email?: string;
-  // Contact Information - Escalation
+  // Contact Information - Escalation (Additional Communication 1)
   custom_escalation_contact_name?: string;
   custom_escalation_role?: string;
   custom_escalation_contact?: string;
   custom_escalation_email?: string;
+  // Contact Information - Additional Communication 2 (maps to custom_contact_name_2, etc.)
+  custom_contact_name_2?: string;
+  custom_role_2?: string;
+  custom_contact_2?: string;
+  custom_email_2?: string;
+  // Contact Information - Additional Communication 3 (Optional, maps to custom_contact_name_3, etc.)
+  custom_contact_name_3?: string;
+  custom_role_3?: string;
+  custom_contact_3?: string;
+  custom_email_3?: string;
   // Commercial Details
   custom_credit_days_from_delivery_date?: string;
   custom_delivery?: string;
@@ -596,6 +606,14 @@ export async function submitOnboardingData(
       escalation_role: 'hod' | 'proprietor' | 'head' | '';
       escalation_contact: string;
       escalation_email: string;
+      additional_contact2_name: string;
+      additional_contact2_role: 'hod' | 'proprietor' | 'head' | '';
+      additional_contact2: string;
+      additional_contact2_email: string;
+      additional_contact_name?: string;
+      additional_contact_role?: 'hod' | 'proprietor' | 'head' | '';
+      additional_contact?: string;
+      additional_contact_email?: string;
     };
     commercialDetails?: {
       credit_days: string;
@@ -710,11 +728,23 @@ export async function submitOnboardingData(
         custom_transaction_contact_name: formData.contactInformation.transaction_name,
         custom_transaction_contact: formData.contactInformation.transaction_contact,
         custom_transaction_email: formData.contactInformation.transaction_email,
-        // Contact Information - Escalation
+        // Contact Information - Additional Communication 1 (Escalation)
         custom_escalation_contact_name: formData.contactInformation.escalation_name,
         custom_escalation_role: formData.contactInformation.escalation_role,
         custom_escalation_contact: formData.contactInformation.escalation_contact,
         custom_escalation_email: formData.contactInformation.escalation_email,
+        // Contact Information - Additional Communication 2 → custom_contact_*_2
+        custom_contact_name_2: formData.contactInformation.additional_contact2_name,
+        custom_role_2: formData.contactInformation.additional_contact2_role,
+        custom_contact_2: formData.contactInformation.additional_contact2,
+        custom_email_2: formData.contactInformation.additional_contact2_email,
+        // Contact Information - Additional Communication 3 (Optional) → custom_contact_*_3
+        ...(formData.contactInformation.additional_contact_name && {
+          custom_contact_name_3: formData.contactInformation.additional_contact_name,
+          custom_role_3: formData.contactInformation.additional_contact_role,
+          custom_contact_3: formData.contactInformation.additional_contact,
+          custom_email_3: formData.contactInformation.additional_contact_email,
+        }),
       }),
       // Commercial Details
       ...(formData.commercialDetails && {

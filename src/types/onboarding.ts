@@ -41,8 +41,17 @@ export interface MSMEStatusData {
 }
 
 export interface DrugLicenseData {
+  // Whether the vendor has a drug license (similar to MSME yes/no)
+  drug_license_status: 'yes' | 'no' | '';
   drug_license_number: string;
   drug_license_document?: File | null;
+}
+
+export interface ContactItem {
+  name: string;
+  contact: string;
+  email: string;
+  role?: 'hod' | 'proprietor' | 'head' | '';
 }
 
 export interface ContactInformationData {
@@ -53,6 +62,14 @@ export interface ContactInformationData {
   escalation_role: 'hod' | 'proprietor' | 'head' | '';
   escalation_contact: string;
   escalation_email: string;
+  additional_contact2_name: string;
+  additional_contact2_role: 'hod' | 'proprietor' | 'head' | '';
+  additional_contact2: string;
+  additional_contact2_email: string;
+  additional_contact_name?: string;
+  additional_contact?: string;
+  additional_contact_email?: string;
+  additional_contact_role?: 'hod' | 'proprietor' | 'head' | '';
 }
 
 export interface AuthorizedDistributorItem {
@@ -156,6 +173,7 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     msme_document: null,
   },
   drugLicense: {
+    drug_license_status: '',
     drug_license_number: '',
     drug_license_document: null,
   },
@@ -167,6 +185,14 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     escalation_role: '',
     escalation_contact: '',
     escalation_email: '',
+    additional_contact2_name: '',
+    additional_contact2_role: '',
+    additional_contact2: '',
+    additional_contact2_email: '',
+    additional_contact_name: '',
+    additional_contact: '',
+    additional_contact_email: '',
+    additional_contact_role: '',
   },
   commercialDetails: {
     credit_days: '45',
