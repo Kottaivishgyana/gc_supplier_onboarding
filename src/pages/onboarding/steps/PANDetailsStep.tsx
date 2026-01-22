@@ -1,17 +1,138 @@
-import { CreditCard, Upload, X, FileText } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { CreditCard, Upload, X, FileText, User, CalendarDays, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { verifyPAN } from '@/services/surepassApi';
 
 export function PANDetailsStep() {
-  const { formData, updatePANDetails } = useOnboardingStore();
+  const { formData, updatePANDetails, setPANVerificationStatus } = useOnboardingStore();
   const { panDetails } = formData;
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
+  const [verificationMessage, setVerificationMessage] = useState<string>('');
+  const verificationTimeoutRef = useRef<number | null>(null);
+  const lastVerifiedRef = useRef<string>('');
 
   const handlePANChange = (value: string) => {
     updatePANDetails({ pan_number: value.toUpperCase() });
+    // Reset verification status when PAN changes
+    if (verificationStatus) {
+      setVerificationStatus(null);
+      setVerificationMessage('');
+      setPANVerificationStatus(null);
+    }
+    lastVerifiedRef.current = '';
   };
+
+  const performVerification = useCallback(async () => {
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+    // Validate fields before verification
+    if (!panDetails.pan_number.trim()) {
+      return;
+    }
+
+    if (!panRegex.test(panDetails.pan_number)) {
+      return;
+    }
+
+    if (!panDetails.full_name.trim()) {
+      return;
+    }
+
+    if (!panDetails.dob) {
+      return;
+    }
+
+    if (!dobRegex.test(panDetails.dob)) {
+      return;
+    }
+
+    // Create a unique key for this verification attempt
+    const verificationKey = `${panDetails.pan_number}-${panDetails.full_name}-${panDetails.dob}`;
+    
+    // Skip if we've already verified this exact combination
+    if (lastVerifiedRef.current === verificationKey) {
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationStatus(null);
+    setVerificationMessage('');
+    setPANVerificationStatus('pending');
+
+    try {
+      const result = await verifyPAN({
+        pan_number: panDetails.pan_number,
+        full_name: panDetails.full_name,
+        dob: panDetails.dob,
+      });
+
+      if (result.success) {
+        setVerificationStatus('success');
+        setVerificationMessage(result.message || 'PAN verified successfully');
+        setPANVerificationStatus('success');
+        lastVerifiedRef.current = verificationKey;
+      } else {
+        setVerificationStatus('error');
+        setVerificationMessage(result.message || 'PAN verification failed');
+        setPANVerificationStatus('error');
+        lastVerifiedRef.current = '';
+      }
+    } catch (error) {
+      setVerificationStatus('error');
+      setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify PAN. Please try again.');
+      setPANVerificationStatus('error');
+      lastVerifiedRef.current = '';
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [panDetails.pan_number, panDetails.full_name, panDetails.dob, setPANVerificationStatus]);
+
+  // Auto-verify when all three fields are filled
+  useEffect(() => {
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+    const canVerify = 
+      panDetails.pan_number.trim() &&
+      panRegex.test(panDetails.pan_number) &&
+      panDetails.full_name.trim() &&
+      panDetails.dob &&
+      dobRegex.test(panDetails.dob);
+
+    if (canVerify) {
+      // Clear existing timeout
+      if (verificationTimeoutRef.current) {
+        clearTimeout(verificationTimeoutRef.current);
+      }
+
+      // Debounce verification by 800ms after user stops typing
+      verificationTimeoutRef.current = window.setTimeout(() => {
+        performVerification();
+      }, 800);
+    } else {
+      // Reset status if fields are incomplete
+      setVerificationStatus((prevStatus) => {
+        if (prevStatus && prevStatus !== 'error') {
+          setPANVerificationStatus(null);
+          return null;
+        }
+        return prevStatus;
+      });
+      setVerificationMessage('');
+    }
+
+    return () => {
+      if (verificationTimeoutRef.current) {
+        clearTimeout(verificationTimeoutRef.current);
+      }
+    };
+  }, [panDetails.pan_number, panDetails.full_name, panDetails.dob, performVerification, setPANVerificationStatus]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,6 +166,87 @@ export function PANDetailsStep() {
                 Format: 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F)
               </p>
             </div>
+
+            {/* Full Name (as per PAN) */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pan_full_name">
+                Full Name (as per PAN) <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="pan_full_name"
+                  placeholder="Enter full name"
+                  value={panDetails.full_name}
+                  onChange={(e) => {
+                    updatePANDetails({ full_name: e.target.value });
+                    // Reset verification status when name changes
+                    if (verificationStatus) {
+                      setVerificationStatus(null);
+                      setVerificationMessage('');
+                      setPANVerificationStatus(null);
+                    }
+                    lastVerifiedRef.current = '';
+                  }}
+                  className="pr-12 h-14"
+                />
+                <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Date of Birth */}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pan_dob">
+                Date of Birth <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="pan_dob"
+                  type="date"
+                  value={panDetails.dob}
+                  onChange={(e) => {
+                    updatePANDetails({ dob: e.target.value });
+                    // Reset verification status when DOB changes
+                    if (verificationStatus) {
+                      setVerificationStatus(null);
+                      setVerificationMessage('');
+                      setPANVerificationStatus(null);
+                    }
+                    lastVerifiedRef.current = '';
+                  }}
+                  className="pr-12 h-14"
+                />
+                <CalendarDays className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+
+            {/* PAN Verification Status */}
+            {(isVerifying || verificationStatus) && (
+              <div className="flex flex-col gap-3">
+                {isVerifying && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">
+                    <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin" />
+                    <span className="text-sm font-medium">Verifying PAN...</span>
+                  </div>
+                )}
+
+                {verificationStatus && !isVerifying && (
+                  <div
+                    className={`flex items-center gap-2 p-3 rounded-lg ${
+                      verificationStatus === 'success'
+                        ? 'bg-green-50 text-green-800 border border-green-200'
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}
+                  >
+                    {verificationStatus === 'success' ? (
+                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    )}
+                    <span className="text-sm font-medium">{verificationMessage}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* PAN Document Upload */}
             <div className="flex flex-col gap-2">
@@ -103,9 +305,12 @@ export function PANDetailsStep() {
 // eslint-disable-next-line react-refresh/only-export-components
 export function validatePANDetails(data: {
   pan_number: string;
+  full_name: string;
+  dob: string;
   pan_document?: File | null;
 }): boolean {
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
   
   if (!data.pan_number.trim()) {
     alert('Please enter PAN number');
@@ -113,6 +318,18 @@ export function validatePANDetails(data: {
   }
   if (!panRegex.test(data.pan_number)) {
     alert('Please enter a valid PAN number (e.g., ABCDE1234F)');
+    return false;
+  }
+  if (!data.full_name.trim()) {
+    alert('Please enter full name (as per PAN)');
+    return false;
+  }
+  if (!data.dob) {
+    alert('Please select date of birth');
+    return false;
+  }
+  if (!dobRegex.test(data.dob)) {
+    alert('Please enter date of birth in YYYY-MM-DD format (e.g., 2003-03-13)');
     return false;
   }
   if (!data.pan_document) {

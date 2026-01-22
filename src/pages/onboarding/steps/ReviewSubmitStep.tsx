@@ -1,4 +1,4 @@
-import { Badge, CreditCard, FileText, Building2, Store, Pencil, User, Pill, Receipt } from 'lucide-react';
+import { Badge, CreditCard, FileText, Building2, Store, Pencil, User, Pill, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -47,7 +47,7 @@ function ReviewItem({ label, value }: ReviewItemProps) {
 }
 
 export function ReviewSubmitStep() {
-  const { formData, goToStep, setTermsAccepted } = useOnboardingStore();
+  const { formData, goToStep, setTermsAccepted, panVerificationStatus, gstVerificationStatus, bankVerificationStatus, msmeVerificationStatus } = useOnboardingStore();
   const { 
     basicInfo, 
     contactInformation,
@@ -186,6 +186,26 @@ export function ReviewSubmitStep() {
               onEdit={() => goToStep(3)}
             >
               <ReviewItem label="PAN Number" value={panDetails.pan_number} />
+              <ReviewItem label="Full Name (as per PAN)" value={panDetails.full_name} />
+              <ReviewItem label="Date of Birth" value={panDetails.dob} />
+              {panVerificationStatus === 'success' && (
+                <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-800 border border-green-200">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">PAN verified successfully</span>
+                </div>
+              )}
+              {panVerificationStatus === 'error' && (
+                <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">PAN verification failed. Please verify your PAN details before submitting.</span>
+                </div>
+              )}
+              {(panVerificationStatus === null || panVerificationStatus === 'pending') && (
+                <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">PAN verification pending. Please complete PAN verification before submitting.</span>
+                </div>
+              )}
             </ReviewSection>
 
             {/* GST Info */}
@@ -199,7 +219,27 @@ export function ReviewSubmitStep() {
                 value={gstInfo.gst_status === 'registered' ? 'Registered' : gstInfo.gst_status === 'not_registered' ? 'Not Registered' : '—'}
               />
               {gstInfo.gst_status === 'registered' && (
-                <ReviewItem label="GSTIN" value={gstInfo.gst_number} />
+                <>
+                  <ReviewItem label="GSTIN" value={gstInfo.gst_number} />
+                  {gstVerificationStatus === 'success' && (
+                    <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-800 border border-green-200">
+                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">GST verified successfully</span>
+                    </div>
+                  )}
+                  {gstVerificationStatus === 'error' && (
+                    <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">GST verification failed. Please verify your GST details before submitting.</span>
+                    </div>
+                  )}
+                  {(gstVerificationStatus === null || gstVerificationStatus === 'pending') && (
+                    <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">GST verification pending. Please complete GST verification before submitting.</span>
+                    </div>
+                  )}
+                </>
               )}
             </ReviewSection>
 
@@ -217,6 +257,24 @@ export function ReviewSubmitStep() {
               <ReviewItem label="IFSC Code" value={bankAccount.ifsc_code} />
               <ReviewItem label="Bank Name" value={bankAccount.bank_name} />
               <ReviewItem label="Branch" value={bankAccount.branch_name} />
+              {bankVerificationStatus === 'success' && (
+                <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-800 border border-green-200">
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Bank account verified successfully</span>
+                </div>
+              )}
+              {bankVerificationStatus === 'error' && (
+                <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Bank account verification failed. Please verify your bank account details before submitting.</span>
+                </div>
+              )}
+              {(bankVerificationStatus === null || bankVerificationStatus === 'pending') && (
+                <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">Bank account verification pending. Please complete bank account verification before submitting.</span>
+                </div>
+              )}
             </ReviewSection>
 
             {/* MSME Status */}
@@ -230,7 +288,27 @@ export function ReviewSubmitStep() {
                 value={msmeStatus.msme_status === 'yes' ? 'Yes' : msmeStatus.msme_status === 'no' ? 'No' : '—'}
               />
               {msmeStatus.msme_status === 'yes' && (
-                <ReviewItem label="Udyam Number" value={msmeStatus.msme_number} />
+                <>
+                  <ReviewItem label="Udyam Number" value={msmeStatus.msme_number} />
+                  {msmeVerificationStatus === 'success' && (
+                    <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-800 border border-green-200">
+                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">MSME verified successfully</span>
+                    </div>
+                  )}
+                  {msmeVerificationStatus === 'error' && (
+                    <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">MSME verification failed. Please verify your MSME details before submitting.</span>
+                    </div>
+                  )}
+                  {(msmeVerificationStatus === null || msmeVerificationStatus === 'pending') && (
+                    <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      <span className="text-sm font-medium">MSME verification pending. Please complete MSME verification before submitting.</span>
+                    </div>
+                  )}
+                </>
               )}
             </ReviewSection>
 

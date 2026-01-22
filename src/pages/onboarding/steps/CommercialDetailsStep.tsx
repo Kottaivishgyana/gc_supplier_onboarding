@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import type { AuthorizedDistributorItem } from '@/types/onboarding';
 
+
+
 export function CommercialDetailsStep() {
   const { formData, updateCommercialDetails } = useOnboardingStore();
   const commercialDetails = formData.commercialDetails || {

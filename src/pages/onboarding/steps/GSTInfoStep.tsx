@@ -1,18 +1,138 @@
-import { FileText, Upload, X } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { FileText, Upload, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+import { verifyGST } from '@/services/surepassApi';
 
 export function GSTInfoStep() {
-  const { formData, updateGSTInfo } = useOnboardingStore();
+  const { formData, updateGSTInfo, setGSTVerificationStatus } = useOnboardingStore();
   const { gstInfo } = formData;
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
+  const [verificationMessage, setVerificationMessage] = useState<string>('');
+  const verificationTimeoutRef = useRef<number | null>(null);
+  const lastVerifiedRef = useRef<string>('');
 
   const handleGSTNumberChange = (value: string) => {
     updateGSTInfo({ gst_number: value.toUpperCase() });
+    // Reset verification status when GST number changes
+    if (verificationStatus) {
+      setVerificationStatus(null);
+      setVerificationMessage('');
+      setGSTVerificationStatus(null);
+    }
+    lastVerifiedRef.current = '';
   };
+
+  const performVerification = useCallback(async () => {
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+    // Validate GST number before verification
+    if (!gstInfo.gst_number.trim()) {
+      return;
+    }
+
+    if (gstInfo.gst_number.length !== 15) {
+      return;
+    }
+
+    if (!gstRegex.test(gstInfo.gst_number)) {
+      return;
+    }
+
+    // Create a unique key for this verification attempt
+    const verificationKey = gstInfo.gst_number;
+    
+    // Skip if we've already verified this exact GST number
+    if (lastVerifiedRef.current === verificationKey) {
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationStatus(null);
+    setVerificationMessage('');
+    setGSTVerificationStatus('pending');
+
+    try {
+      const result = await verifyGST({
+        gstin: gstInfo.gst_number,
+      });
+
+      if (result.success) {
+        setVerificationStatus('success');
+        setVerificationMessage(result.message || 'GST verified successfully');
+        setGSTVerificationStatus('success');
+        lastVerifiedRef.current = verificationKey;
+      } else {
+        setVerificationStatus('error');
+        setVerificationMessage(result.message || 'GST verification failed');
+        setGSTVerificationStatus('error');
+        lastVerifiedRef.current = '';
+      }
+    } catch (error) {
+      setVerificationStatus('error');
+      setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify GST. Please try again.');
+      setGSTVerificationStatus('error');
+      lastVerifiedRef.current = '';
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [gstInfo.gst_number, setGSTVerificationStatus]);
+
+  // Auto-verify when GST number is entered and status is registered
+  useEffect(() => {
+    if (gstInfo.gst_status !== 'registered') {
+      // Reset status if not registered
+      setVerificationStatus((prevStatus) => {
+        if (prevStatus) {
+          setGSTVerificationStatus(null);
+          return null;
+        }
+        return prevStatus;
+      });
+      setVerificationMessage('');
+      return;
+    }
+
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+    const canVerify = 
+      gstInfo.gst_number.trim() &&
+      gstInfo.gst_number.length === 15 &&
+      gstRegex.test(gstInfo.gst_number);
+
+    if (canVerify) {
+      // Clear existing timeout
+      if (verificationTimeoutRef.current) {
+        clearTimeout(verificationTimeoutRef.current);
+      }
+
+      // Debounce verification by 800ms after user stops typing
+      verificationTimeoutRef.current = window.setTimeout(() => {
+        performVerification();
+      }, 800);
+    } else {
+      // Reset status if GST number is incomplete
+      setVerificationStatus((prevStatus) => {
+        if (prevStatus && prevStatus !== 'error') {
+          setGSTVerificationStatus(null);
+          return null;
+        }
+        return prevStatus;
+      });
+      setVerificationMessage('');
+    }
+
+    return () => {
+      if (verificationTimeoutRef.current) {
+        clearTimeout(verificationTimeoutRef.current);
+      }
+    };
+  }, [gstInfo.gst_status, gstInfo.gst_number, performVerification, setGSTVerificationStatus]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,9 +153,16 @@ export function GSTInfoStep() {
               </Label>
               <RadioGroup
                 value={gstInfo.gst_status}
-                onValueChange={(value) =>
-                  updateGSTInfo({ gst_status: value as 'registered' | 'not_registered' })
-                }
+                onValueChange={(value) => {
+                  updateGSTInfo({ gst_status: value as 'registered' | 'not_registered' });
+                  // Reset verification status when GST status changes
+                  if (verificationStatus) {
+                    setVerificationStatus(null);
+                    setVerificationMessage('');
+                    setGSTVerificationStatus(null);
+                  }
+                  lastVerifiedRef.current = '';
+                }}
                 className="flex gap-6"
               >
                 <div className="flex items-center gap-2">
@@ -75,6 +202,35 @@ export function GSTInfoStep() {
                     15-character GST Identification Number
                   </p>
                 </div>
+
+                {/* GST Verification Status */}
+                {(isVerifying || verificationStatus) && (
+                  <div className="flex flex-col gap-3">
+                    {isVerifying && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 text-blue-800 border border-blue-200">
+                        <Loader2 className="w-5 h-5 flex-shrink-0 animate-spin" />
+                        <span className="text-sm font-medium">Verifying GST...</span>
+                      </div>
+                    )}
+
+                    {verificationStatus && !isVerifying && (
+                      <div
+                        className={`flex items-center gap-2 p-3 rounded-lg ${
+                          verificationStatus === 'success'
+                            ? 'bg-green-50 text-green-800 border border-green-200'
+                            : 'bg-red-50 text-red-800 border border-red-200'
+                        }`}
+                      >
+                        {verificationStatus === 'success' ? (
+                          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                        )}
+                        <span className="text-sm font-medium">{verificationMessage}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* GST Document Upload */}
                 <div className="flex flex-col gap-2">

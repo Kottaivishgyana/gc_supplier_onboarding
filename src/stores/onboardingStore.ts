@@ -174,6 +174,10 @@ interface OnboardingStore {
   error: string | null;
   supplierId: string | null;
   supplierData: SupplierApiData | null;
+  panVerificationStatus: 'success' | 'error' | 'pending' | null;
+  gstVerificationStatus: 'success' | 'error' | 'pending' | null;
+  bankVerificationStatus: 'success' | 'error' | 'pending' | null;
+  msmeVerificationStatus: 'success' | 'error' | 'pending' | null;
   
   // Navigation
   nextStep: () => void;
@@ -190,6 +194,10 @@ interface OnboardingStore {
   updateContactInformation: (data: Partial<ContactInformationData>) => void;
   updateCommercialDetails: (data: Partial<CommercialDetailsData>) => void;
   setTermsAccepted: (accepted: boolean) => void;
+  setPANVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
+  setGSTVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
+  setBankVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
+  setMSMEVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
   
   // API Actions
   initializeFromUrl: () => Promise<void>;
@@ -207,6 +215,10 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   error: null,
   supplierId: null,
   supplierData: null,
+  panVerificationStatus: null,
+  gstVerificationStatus: null,
+  bankVerificationStatus: null,
+  msmeVerificationStatus: null,
 
   nextStep: () => {
     const state = get();
@@ -315,6 +327,14 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     set({ formData: newFormData });
     saveToCache(state.supplierId, newFormData);
   },
+
+  setPANVerificationStatus: (status) => set({ panVerificationStatus: status }),
+
+  setGSTVerificationStatus: (status) => set({ gstVerificationStatus: status }),
+
+  setBankVerificationStatus: (status) => set({ bankVerificationStatus: status }),
+
+  setMSMEVerificationStatus: (status) => set({ msmeVerificationStatus: status }),
 
   setError: (error) => set({ error }),
 
@@ -452,6 +472,10 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
       isSubmitted: false,
       isSubmitting: false,
       error: null,
+      panVerificationStatus: null,
+      gstVerificationStatus: null,
+      bankVerificationStatus: null,
+      msmeVerificationStatus: null,
     });
   },
 }));

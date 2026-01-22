@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { message } from 'antd';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export function OnboardingPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
   const { 
     currentStep, 
     formData, 
@@ -35,6 +37,10 @@ export function OnboardingPage() {
     isSubmitting,
     error,
     supplierId,
+    panVerificationStatus,
+    gstVerificationStatus,
+    bankVerificationStatus,
+    msmeVerificationStatus,
   } = useOnboardingStore();
 
   // Initialize from URL params on mount
@@ -68,12 +74,103 @@ export function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
+    // Check PAN verification status
+    if (panVerificationStatus === 'error') {
+      messageApi.error({
+        content: 'PAN verification failed. Please verify your PAN details before submitting the form.',
+        duration: 5,
+      });
+      // Navigate to PAN details step
+      useOnboardingStore.getState().goToStep(3);
+      return;
+    }
+    
+    if (panVerificationStatus === null || panVerificationStatus === 'pending') {
+      messageApi.warning({
+        content: 'Please wait for PAN verification to complete before submitting the form.',
+        duration: 5,
+      });
+      // Navigate to PAN details step
+      useOnboardingStore.getState().goToStep(3);
+      return;
+    }
+
+    // Check GST verification status (only if GST status is registered)
+    if (formData.gstInfo.gst_status === 'registered') {
+      if (gstVerificationStatus === 'error') {
+        messageApi.error({
+          content: 'GST verification failed. Please verify your GST details before submitting the form.',
+          duration: 5,
+        });
+        // Navigate to GST info step
+        useOnboardingStore.getState().goToStep(4);
+        return;
+      }
+      
+      if (gstVerificationStatus === null || gstVerificationStatus === 'pending') {
+        messageApi.warning({
+          content: 'Please wait for GST verification to complete before submitting the form.',
+          duration: 5,
+        });
+        // Navigate to GST info step
+        useOnboardingStore.getState().goToStep(4);
+        return;
+      }
+    }
+
+    // Check Bank Account verification status
+    if (bankVerificationStatus === 'error') {
+      messageApi.error({
+        content: 'Bank account verification failed. Please verify your bank account details before submitting the form.',
+        duration: 5,
+      });
+      // Navigate to bank account step
+      useOnboardingStore.getState().goToStep(5);
+      return;
+    }
+    
+    if (bankVerificationStatus === null || bankVerificationStatus === 'pending') {
+      messageApi.warning({
+        content: 'Please wait for bank account verification to complete before submitting the form.',
+        duration: 5,
+      });
+      // Navigate to bank account step
+      useOnboardingStore.getState().goToStep(5);
+      return;
+    }
+
+    // Check MSME verification status (only if MSME status is yes)
+    if (formData.msmeStatus.msme_status === 'yes') {
+      if (msmeVerificationStatus === 'error') {
+        messageApi.error({
+          content: 'MSME verification failed. Please verify your MSME details before submitting the form.',
+          duration: 5,
+        });
+        // Navigate to MSME status step
+        useOnboardingStore.getState().goToStep(6);
+        return;
+      }
+      
+      if (msmeVerificationStatus === null || msmeVerificationStatus === 'pending') {
+        messageApi.warning({
+          content: 'Please wait for MSME verification to complete before submitting the form.',
+          duration: 5,
+        });
+        // Navigate to MSME status step
+        useOnboardingStore.getState().goToStep(6);
+        return;
+      }
+    }
+
     if (validateReviewSubmit(formData.termsAccepted)) {
       const result = await submitForm();
       if (result.success) {
         setShowSuccessModal(true);
       } else {
-        alert(result.message || 'Failed to submit. Please try again.');
+        messageApi.error({
+          content: result.message || 'Failed to submit. Please try again.',
+          duration: 5,
+        });
       }
     }
   };
@@ -149,8 +246,10 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <div className="flex flex-1 justify-center py-8 px-4 sm:px-6 lg:px-8">
+    <>
+      {contextHolder}
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-1 justify-center py-8 px-4 sm:px-6 lg:px-8">
         <div className="flex w-full max-w-7xl gap-8 lg:gap-16">
           {/* Sidebar Stepper */}
           <Stepper />
@@ -203,6 +302,7 @@ export function OnboardingPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   );
 }

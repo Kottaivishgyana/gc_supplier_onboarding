@@ -16,6 +16,8 @@ export interface BasicInfoData {
 
 export interface PANDetailsData {
   pan_number: string;
+  full_name: string;
+  dob: string; // YYYY-MM-DD
   pan_document?: File | null;
 }
 
@@ -152,6 +154,8 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
   },
   panDetails: {
     pan_number: '',
+    full_name: '',
+    dob: '',
     pan_document: null,
   },
   gstInfo: {
