@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Store, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Store, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyMSME } from '@/services/surepassApi';
@@ -13,31 +14,20 @@ export function MSMEStatusStep() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string>('');
-  const verificationTimeoutRef = useRef<number | null>(null);
-  const lastVerifiedRef = useRef<string>('');
 
   const handleMSMENumberChange = (value: string) => {
     updateMSMEStatus({ msme_number: value.toUpperCase() });
-    // Reset verification status when MSME number changes
-    if (verificationStatus) {
-      setVerificationStatus(null);
-      setVerificationMessage('');
-      setMSMEVerificationStatus(null);
-    }
-    lastVerifiedRef.current = '';
   };
 
-  const performVerification = useCallback(async () => {
-    // Validate MSME number before verification
-    if (!msmeStatus.msme_number.trim()) {
+  const handleVerify = async () => {
+    if (msmeStatus.msme_status !== 'yes') {
+      alert('Please select MSME status as Yes');
       return;
     }
 
-    // Create a unique key for this verification attempt
-    const verificationKey = msmeStatus.msme_number;
-    
-    // Skip if we've already verified this exact MSME number
-    if (lastVerifiedRef.current === verificationKey) {
+    // Validate MSME number before verification
+    if (!msmeStatus.msme_number.trim()) {
+      alert('Please enter Udyam Registration Number');
       return;
     }
 
@@ -51,72 +41,90 @@ export function MSMEStatusStep() {
         uan: msmeStatus.msme_number,
       });
 
-      if (result.success) {
-        setVerificationStatus('success');
-        setVerificationMessage(result.message || 'MSME verified successfully');
-        setMSMEVerificationStatus('success');
-        lastVerifiedRef.current = verificationKey;
+      console.log('MSME Verification Response:', result);
+
+      if (result.success && result.data) {
+        // Handle the response structure: result.data contains the API response
+        // The API response has: { data: { main_details: {...}, enterprise_type_list: [...] }, status_code, success, ... }
+        const apiResponse = result.data;
+        const responseData = apiResponse.data;
+        const mainDetails = responseData?.main_details;
+
+        if (mainDetails) {
+          // Construct address from available fields
+          const addressParts: string[] = [];
+          if (mainDetails.flat) addressParts.push(mainDetails.flat);
+          if (mainDetails.name_of_building) addressParts.push(mainDetails.name_of_building);
+          if (mainDetails.road) addressParts.push(mainDetails.road);
+          if (mainDetails.village) addressParts.push(mainDetails.village);
+          if (mainDetails.block) addressParts.push(mainDetails.block);
+          if (mainDetails.city) addressParts.push(mainDetails.city);
+          if (mainDetails.state) addressParts.push(mainDetails.state);
+          if (mainDetails.pin) addressParts.push(mainDetails.pin);
+          const address = addressParts.join(', ');
+
+          // Extract enterprise_type_list - check both main_details and root data level
+          let enterpriseTypeList: Array<{
+            classification_year?: string;
+            enterprise_type?: string;
+            classification_date?: string;
+          }> = [];
+          
+          if (mainDetails.enterprise_type_list && Array.isArray(mainDetails.enterprise_type_list)) {
+            enterpriseTypeList = mainDetails.enterprise_type_list;
+          } else if (responseData?.enterprise_type_list && Array.isArray(responseData.enterprise_type_list)) {
+            enterpriseTypeList = responseData.enterprise_type_list;
+          }
+
+          console.log('Extracted enterprise_type_list:', enterpriseTypeList);
+
+          const verificationData = {
+            name_of_enterprise: mainDetails.name_of_enterprise || '',
+            major_activity: mainDetails.major_activity || '',
+            date_of_commencement: mainDetails.date_of_commencement || '',
+            organization_type: mainDetails.organization_type || '',
+            address: address || '',
+            enterprise_type_list: enterpriseTypeList.map((item: {
+              classification_year?: string;
+              enterprise_type?: string;
+              classification_date?: string;
+            }) => ({
+              classification_year: item.classification_year || '',
+              enterprise_type: item.enterprise_type || '',
+              classification_date: item.classification_date || '',
+            })),
+          };
+
+          console.log('Storing MSME Verification Data:', verificationData);
+          console.log('Enterprise Type List Count:', verificationData.enterprise_type_list.length);
+
+          // Store verification data in the store
+          updateMSMEStatus({
+            verification_data: verificationData,
+          });
+
+          setVerificationStatus('success');
+          setVerificationMessage(result.message || 'MSME verified successfully');
+          setMSMEVerificationStatus('success');
+        } else {
+          console.error('MSME verification response missing main_details');
+          setVerificationStatus('error');
+          setVerificationMessage('MSME verification failed: Invalid response structure');
+          setMSMEVerificationStatus('error');
+        }
       } else {
         setVerificationStatus('error');
         setVerificationMessage(result.message || 'MSME verification failed');
         setMSMEVerificationStatus('error');
-        lastVerifiedRef.current = '';
       }
     } catch (error) {
       setVerificationStatus('error');
       setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify MSME. Please try again.');
       setMSMEVerificationStatus('error');
-      lastVerifiedRef.current = '';
     } finally {
       setIsVerifying(false);
     }
-  }, [msmeStatus.msme_number, setMSMEVerificationStatus]);
-
-  // Auto-verify when MSME number is entered and status is yes
-  useEffect(() => {
-    if (msmeStatus.msme_status !== 'yes') {
-      // Reset status if not yes
-      setVerificationStatus((prevStatus) => {
-        if (prevStatus) {
-          setMSMEVerificationStatus(null);
-          return null;
-        }
-        return prevStatus;
-      });
-      setVerificationMessage('');
-      return;
-    }
-
-    const canVerify = msmeStatus.msme_number.trim();
-
-    if (canVerify) {
-      // Clear existing timeout
-      if (verificationTimeoutRef.current) {
-        clearTimeout(verificationTimeoutRef.current);
-      }
-
-      // Debounce verification by 800ms after user stops typing
-      verificationTimeoutRef.current = window.setTimeout(() => {
-        performVerification();
-      }, 800);
-    } else {
-      // Reset status if MSME number is incomplete
-      setVerificationStatus((prevStatus) => {
-        if (prevStatus && prevStatus !== 'error') {
-          setMSMEVerificationStatus(null);
-          return null;
-        }
-        return prevStatus;
-      });
-      setVerificationMessage('');
-    }
-
-    return () => {
-      if (verificationTimeoutRef.current) {
-        clearTimeout(verificationTimeoutRef.current);
-      }
-    };
-  }, [msmeStatus.msme_status, msmeStatus.msme_number, performVerification, setMSMEVerificationStatus]);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -140,13 +148,6 @@ export function MSMEStatusStep() {
                 value={msmeStatus.msme_status}
                 onValueChange={(value) => {
                   updateMSMEStatus({ msme_status: value as 'yes' | 'no' });
-                  // Reset verification status when MSME status changes
-                  if (verificationStatus) {
-                    setVerificationStatus(null);
-                    setVerificationMessage('');
-                    setMSMEVerificationStatus(null);
-                  }
-                  lastVerifiedRef.current = '';
                 }}
                 className="flex gap-6"
               >
@@ -186,6 +187,18 @@ export function MSMEStatusStep() {
                   <p className="text-sm text-muted-foreground">
                     Format: UDYAM-XX-00-0000000
                   </p>
+                </div>
+
+                {/* Verify Button */}
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={handleVerify} 
+                    disabled={isVerifying}
+                    className="gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    {isVerifying ? 'Verifying...' : 'Verify MSME'}
+                  </Button>
                 </div>
 
                 {/* MSME Verification Status */}

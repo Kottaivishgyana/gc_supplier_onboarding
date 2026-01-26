@@ -34,12 +34,26 @@ export interface BankAccountData {
   ifsc_code: string;
   bank_name: string;
   branch_name: string;
+  micr?: string;
 }
 
 export interface MSMEStatusData {
   msme_status: 'yes' | 'no' | '';
   msme_number: string;
   msme_document?: File | null;
+  // MSME verification response data
+  verification_data?: {
+    name_of_enterprise?: string;
+    major_activity?: string;
+    date_of_commencement?: string;
+    organization_type?: string;
+    address?: string;
+    enterprise_type_list?: Array<{
+      classification_year: string;
+      enterprise_type: string;
+      classification_date: string;
+    }>;
+  };
 }
 
 export interface DrugLicenseData {
@@ -175,6 +189,7 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     msme_status: '',
     msme_number: '',
     msme_document: null,
+    verification_data: undefined,
   },
   drugLicense: {
     drug_license_status: '',

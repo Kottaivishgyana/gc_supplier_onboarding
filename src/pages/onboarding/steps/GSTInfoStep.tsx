@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { FileText, Upload, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, Upload, X, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,47 +14,48 @@ export function GSTInfoStep() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string>('');
-  const verificationTimeoutRef = useRef<number | null>(null);
-  const lastVerifiedRef = useRef<string>('');
+  const [verificationData, setVerificationData] = useState<{
+    business_name?: string;
+    legal_name?: string;
+    date_of_registration?: string;
+    taxpayer_type?: string;
+    gstin_status?: string;
+    address?: string;
+    constitution_of_business?: string;
+  } | null>(null);
 
   const handleGSTNumberChange = (value: string) => {
     updateGSTInfo({ gst_number: value.toUpperCase() });
-    // Reset verification status when GST number changes
-    if (verificationStatus) {
-      setVerificationStatus(null);
-      setVerificationMessage('');
-      setGSTVerificationStatus(null);
-    }
-    lastVerifiedRef.current = '';
   };
 
-  const performVerification = useCallback(async () => {
+  const handleVerify = async () => {
+    if (gstInfo.gst_status !== 'registered') {
+      alert('Please select GST status as Registered');
+      return;
+    }
+
     const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
     // Validate GST number before verification
     if (!gstInfo.gst_number.trim()) {
+      alert('Please enter GSTIN');
       return;
     }
 
     if (gstInfo.gst_number.length !== 15) {
+      alert('GSTIN must be 15 characters');
       return;
     }
 
     if (!gstRegex.test(gstInfo.gst_number)) {
-      return;
-    }
-
-    // Create a unique key for this verification attempt
-    const verificationKey = gstInfo.gst_number;
-    
-    // Skip if we've already verified this exact GST number
-    if (lastVerifiedRef.current === verificationKey) {
+      alert('Please enter a valid GSTIN');
       return;
     }
 
     setIsVerifying(true);
     setVerificationStatus(null);
     setVerificationMessage('');
+    setVerificationData(null);
     setGSTVerificationStatus('pending');
 
     try {
@@ -62,77 +63,35 @@ export function GSTInfoStep() {
         gstin: gstInfo.gst_number,
       });
 
-      if (result.success) {
+      if (result.success && result.data?.data) {
+        const gstData = result.data.data as {
+          business_name?: string;
+          legal_name?: string;
+          date_of_registration?: string;
+          taxpayer_type?: string;
+          gstin_status?: string;
+          address?: string;
+          constitution_of_business?: string;
+        };
+        
+        setVerificationData(gstData);
         setVerificationStatus('success');
         setVerificationMessage(result.message || 'GST verified successfully');
         setGSTVerificationStatus('success');
-        lastVerifiedRef.current = verificationKey;
       } else {
+        setVerificationData(null);
         setVerificationStatus('error');
         setVerificationMessage(result.message || 'GST verification failed');
         setGSTVerificationStatus('error');
-        lastVerifiedRef.current = '';
       }
     } catch (error) {
       setVerificationStatus('error');
       setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify GST. Please try again.');
       setGSTVerificationStatus('error');
-      lastVerifiedRef.current = '';
     } finally {
       setIsVerifying(false);
     }
-  }, [gstInfo.gst_number, setGSTVerificationStatus]);
-
-  // Auto-verify when GST number is entered and status is registered
-  useEffect(() => {
-    if (gstInfo.gst_status !== 'registered') {
-      // Reset status if not registered
-      setVerificationStatus((prevStatus) => {
-        if (prevStatus) {
-          setGSTVerificationStatus(null);
-          return null;
-        }
-        return prevStatus;
-      });
-      setVerificationMessage('');
-      return;
-    }
-
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-
-    const canVerify = 
-      gstInfo.gst_number.trim() &&
-      gstInfo.gst_number.length === 15 &&
-      gstRegex.test(gstInfo.gst_number);
-
-    if (canVerify) {
-      // Clear existing timeout
-      if (verificationTimeoutRef.current) {
-        clearTimeout(verificationTimeoutRef.current);
-      }
-
-      // Debounce verification by 800ms after user stops typing
-      verificationTimeoutRef.current = window.setTimeout(() => {
-        performVerification();
-      }, 800);
-    } else {
-      // Reset status if GST number is incomplete
-      setVerificationStatus((prevStatus) => {
-        if (prevStatus && prevStatus !== 'error') {
-          setGSTVerificationStatus(null);
-          return null;
-        }
-        return prevStatus;
-      });
-      setVerificationMessage('');
-    }
-
-    return () => {
-      if (verificationTimeoutRef.current) {
-        clearTimeout(verificationTimeoutRef.current);
-      }
-    };
-  }, [gstInfo.gst_status, gstInfo.gst_number, performVerification, setGSTVerificationStatus]);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,13 +114,6 @@ export function GSTInfoStep() {
                 value={gstInfo.gst_status}
                 onValueChange={(value) => {
                   updateGSTInfo({ gst_status: value as 'registered' | 'not_registered' });
-                  // Reset verification status when GST status changes
-                  if (verificationStatus) {
-                    setVerificationStatus(null);
-                    setVerificationMessage('');
-                    setGSTVerificationStatus(null);
-                  }
-                  lastVerifiedRef.current = '';
                 }}
                 className="flex gap-6"
               >
@@ -203,6 +155,18 @@ export function GSTInfoStep() {
                   </p>
                 </div>
 
+                {/* Verify Button */}
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={handleVerify} 
+                    disabled={isVerifying}
+                    className="gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    {isVerifying ? 'Verifying...' : 'Verify GST'}
+                  </Button>
+                </div>
+
                 {/* GST Verification Status */}
                 {(isVerifying || verificationStatus) && (
                   <div className="flex flex-col gap-3">
@@ -230,6 +194,61 @@ export function GSTInfoStep() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* GST Verification Details Card */}
+                {verificationStatus === 'success' && verificationData && (
+                  <Card className="bg-muted/30">
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col gap-4">
+                        <h3 className="text-lg font-semibold">GST Verification Details</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                          {verificationData.business_name && (
+                            <div>
+                              <p className="text-muted-foreground">Business Name</p>
+                              <p className="font-medium">{verificationData.business_name}</p>
+                            </div>
+                          )}
+                          {verificationData.legal_name && (
+                            <div>
+                              <p className="text-muted-foreground">Legal Name</p>
+                              <p className="font-medium">{verificationData.legal_name}</p>
+                            </div>
+                          )}
+                          {verificationData.date_of_registration && (
+                            <div>
+                              <p className="text-muted-foreground">Date of Registration</p>
+                              <p className="font-medium">{verificationData.date_of_registration}</p>
+                            </div>
+                          )}
+                          {verificationData.taxpayer_type && (
+                            <div>
+                              <p className="text-muted-foreground">Taxpayer Type</p>
+                              <p className="font-medium">{verificationData.taxpayer_type}</p>
+                            </div>
+                          )}
+                          {verificationData.gstin_status && (
+                            <div>
+                              <p className="text-muted-foreground">GSTIN Status</p>
+                              <p className="font-medium">{verificationData.gstin_status}</p>
+                            </div>
+                          )}
+                          {verificationData.constitution_of_business && (
+                            <div>
+                              <p className="text-muted-foreground">Constitution of Business</p>
+                              <p className="font-medium">{verificationData.constitution_of_business}</p>
+                            </div>
+                          )}
+                          {verificationData.address && (
+                            <div className="col-span-1 sm:col-span-2">
+                              <p className="text-muted-foreground">Address</p>
+                              <p className="font-medium">{verificationData.address}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
 
                 {/* GST Document Upload */}

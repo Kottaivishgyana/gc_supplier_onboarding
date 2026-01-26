@@ -174,6 +174,13 @@ interface BankAccountVerifyResponse {
     status_code?: number;
     success?: boolean;
     message?: string;
+    data?: {
+      ifsc_details?: {
+        micr?: string;
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
     [key: string]: unknown;
   };
 }
@@ -205,6 +212,7 @@ export async function verifyBankAccount(data: BankAccountVerifyRequest): Promise
       body: JSON.stringify({
         id_number: data.account_number.trim(),
         ifsc: data.ifsc_code.toUpperCase().trim(),
+        ifsc_details: true,
       }),
     });
 
@@ -253,6 +261,22 @@ interface MSMEVerifyResponse {
       uan?: string;
       main_details?: {
         name_of_enterprise?: string;
+        major_activity?: string;
+        date_of_commencement?: string;
+        organization_type?: string;
+        flat?: string;
+        name_of_building?: string;
+        road?: string;
+        village?: string;
+        block?: string;
+        city?: string;
+        state?: string;
+        pin?: string;
+        enterprise_type_list?: Array<{
+          classification_year?: string;
+          enterprise_type?: string;
+          classification_date?: string;
+        }>;
         [key: string]: unknown;
       };
       [key: string]: unknown;

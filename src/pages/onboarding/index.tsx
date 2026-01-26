@@ -1,14 +1,6 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { useEffect } from 'react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { message } from 'antd';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Stepper } from '@/components/ui/onboarding/Stepper';
 import { MobileStepper } from '@/components/ui/onboarding/MobileStepper';
@@ -22,31 +14,28 @@ import { DrugLicenseStep, validateDrugLicense } from './steps/DrugLicenseStep';
 import { ContactInformationStep, validateContactInformation } from './steps/ContactInformationStep';
 import { CommercialDetailsStep, validateCommercialDetails } from './steps/CommercialDetailsStep';
 import { ReviewSubmitStep, validateReviewSubmit } from './steps/ReviewSubmitStep';
+import { ThankYouPage } from './ThankYouPage';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export function OnboardingPage() {
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const { 
     currentStep, 
     formData, 
-    submitForm, 
-    resetForm,
+    submitForm,
     initializeFromUrl,
     isLoading,
     isSubmitting,
+    isSubmitted,
     error,
     supplierId,
-    panVerificationStatus,
-    gstVerificationStatus,
-    bankVerificationStatus,
-    msmeVerificationStatus,
   } = useOnboardingStore();
 
   // Initialize from URL params on mount
   useEffect(() => {
     initializeFromUrl();
   }, [initializeFromUrl]);
+
 
   const validateCurrentStep = (): boolean => {
     switch (currentStep) {
@@ -74,98 +63,14 @@ export function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
-    // Check PAN verification status
-    if (panVerificationStatus === 'error') {
-      messageApi.error({
-        content: 'PAN verification failed. Please verify your PAN details before submitting the form.',
-        duration: 5,
-      });
-      // Navigate to PAN details step
-      useOnboardingStore.getState().goToStep(3);
-      return;
-    }
-    
-    if (panVerificationStatus === null || panVerificationStatus === 'pending') {
-      messageApi.warning({
-        content: 'Please wait for PAN verification to complete before submitting the form.',
-        duration: 5,
-      });
-      // Navigate to PAN details step
-      useOnboardingStore.getState().goToStep(3);
-      return;
-    }
-
-    // Check GST verification status (only if GST status is registered)
-    if (formData.gstInfo.gst_status === 'registered') {
-      if (gstVerificationStatus === 'error') {
-        messageApi.error({
-          content: 'GST verification failed. Please verify your GST details before submitting the form.',
-          duration: 5,
-        });
-        // Navigate to GST info step
-        useOnboardingStore.getState().goToStep(4);
-        return;
-      }
-      
-      if (gstVerificationStatus === null || gstVerificationStatus === 'pending') {
-        messageApi.warning({
-          content: 'Please wait for GST verification to complete before submitting the form.',
-          duration: 5,
-        });
-        // Navigate to GST info step
-        useOnboardingStore.getState().goToStep(4);
-        return;
-      }
-    }
-
-    // Check Bank Account verification status
-    if (bankVerificationStatus === 'error') {
-      messageApi.error({
-        content: 'Bank account verification failed. Please verify your bank account details before submitting the form.',
-        duration: 5,
-      });
-      // Navigate to bank account step
-      useOnboardingStore.getState().goToStep(5);
-      return;
-    }
-    
-    if (bankVerificationStatus === null || bankVerificationStatus === 'pending') {
-      messageApi.warning({
-        content: 'Please wait for bank account verification to complete before submitting the form.',
-        duration: 5,
-      });
-      // Navigate to bank account step
-      useOnboardingStore.getState().goToStep(5);
-      return;
-    }
-
-    // Check MSME verification status (only if MSME status is yes)
-    if (formData.msmeStatus.msme_status === 'yes') {
-      if (msmeVerificationStatus === 'error') {
-        messageApi.error({
-          content: 'MSME verification failed. Please verify your MSME details before submitting the form.',
-          duration: 5,
-        });
-        // Navigate to MSME status step
-        useOnboardingStore.getState().goToStep(6);
-        return;
-      }
-      
-      if (msmeVerificationStatus === null || msmeVerificationStatus === 'pending') {
-        messageApi.warning({
-          content: 'Please wait for MSME verification to complete before submitting the form.',
-          duration: 5,
-        });
-        // Navigate to MSME status step
-        useOnboardingStore.getState().goToStep(6);
-        return;
-      }
-    }
-
     if (validateReviewSubmit(formData.termsAccepted)) {
       const result = await submitForm();
       if (result.success) {
-        setShowSuccessModal(true);
+        // Form submission successful - ThankYouPage will be shown
+        messageApi.success({
+          content: 'Form submitted successfully!',
+          duration: 3,
+        });
       } else {
         messageApi.error({
           content: result.message || 'Failed to submit. Please try again.',
@@ -173,13 +78,6 @@ export function OnboardingPage() {
         });
       }
     }
-  };
-
-  const handleCloseModal = () => {
-    setShowSuccessModal(false);
-    resetForm();
-    // Redirect to a thank you page or close window
-    window.close();
   };
 
   const renderStep = () => {
@@ -206,6 +104,11 @@ export function OnboardingPage() {
         return <BasicInfoStep />;
     }
   };
+
+  // Show Thank You page if form is submitted
+  if (isSubmitted) {
+    return <ThankYouPage />;
+  }
 
   // Loading state
   if (isLoading) {
@@ -281,27 +184,6 @@ export function OnboardingPage() {
           </main>
         </div>
       </div>
-
-      {/* Success Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="text-center">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-12 h-12 text-green-600" />
-            </div>
-            <DialogTitle className="text-2xl text-center">Application Submitted!</DialogTitle>
-            <DialogDescription className="text-center">
-              Your onboarding application has been submitted successfully. Our team will
-              review your documents and get back to you within 3-5 business days.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center mt-4">
-            <Button onClick={handleCloseModal} className="w-full">
-              Done
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
       </div>
     </>
   );

@@ -197,13 +197,13 @@ export function ReviewSubmitStep() {
               {panVerificationStatus === 'error' && (
                 <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm font-medium">PAN verification failed. Please verify your PAN details before submitting.</span>
+                  <span className="text-sm font-medium">PAN verification failed. You can still submit the form.</span>
                 </div>
               )}
               {(panVerificationStatus === null || panVerificationStatus === 'pending') && (
                 <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm font-medium">PAN verification pending. Please complete PAN verification before submitting.</span>
+                  <span className="text-sm font-medium">PAN verification not completed. You can still submit the form.</span>
                 </div>
               )}
             </ReviewSection>
@@ -230,13 +230,13 @@ export function ReviewSubmitStep() {
                   {gstVerificationStatus === 'error' && (
                     <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
                       <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                      <span className="text-sm font-medium">GST verification failed. Please verify your GST details before submitting.</span>
+                      <span className="text-sm font-medium">GST verification failed. You can still submit the form.</span>
                     </div>
                   )}
                   {(gstVerificationStatus === null || gstVerificationStatus === 'pending') && (
                     <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
                       <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                      <span className="text-sm font-medium">GST verification pending. Please complete GST verification before submitting.</span>
+                      <span className="text-sm font-medium">GST verification not completed. You can still submit the form.</span>
                     </div>
                   )}
                 </>
@@ -266,13 +266,13 @@ export function ReviewSubmitStep() {
               {bankVerificationStatus === 'error' && (
                 <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm font-medium">Bank account verification failed. Please verify your bank account details before submitting.</span>
+                  <span className="text-sm font-medium">Bank account verification failed. You can still submit the form.</span>
                 </div>
               )}
               {(bankVerificationStatus === null || bankVerificationStatus === 'pending') && (
                 <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
                   <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span className="text-sm font-medium">Bank account verification pending. Please complete bank account verification before submitting.</span>
+                  <span className="text-sm font-medium">Bank account verification not completed. You can still submit the form.</span>
                 </div>
               )}
             </ReviewSection>
@@ -299,13 +299,13 @@ export function ReviewSubmitStep() {
                   {msmeVerificationStatus === 'error' && (
                     <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-800 border border-red-200">
                       <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                      <span className="text-sm font-medium">MSME verification failed. Please verify your MSME details before submitting.</span>
+                      <span className="text-sm font-medium">MSME verification failed. You can still submit the form.</span>
                     </div>
                   )}
                   {(msmeVerificationStatus === null || msmeVerificationStatus === 'pending') && (
                     <div className="col-span-2 flex items-center gap-2 p-3 rounded-lg bg-yellow-50 text-yellow-800 border border-yellow-200">
                       <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                      <span className="text-sm font-medium">MSME verification pending. Please complete MSME verification before submitting.</span>
+                      <span className="text-sm font-medium">MSME verification not completed. You can still submit the form.</span>
                     </div>
                   )}
                 </>

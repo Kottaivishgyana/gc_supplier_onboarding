@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { User, Building2, Hash, MapPin, Landmark, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { User, Building2, Hash, MapPin, Landmark, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyBankAccount } from '@/services/surepassApi';
 
@@ -12,46 +13,24 @@ export function BankAccountStep() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string>('');
-  const verificationTimeoutRef = useRef<number | null>(null);
-  const lastVerifiedRef = useRef<string>('');
 
   const handleIFSCChange = (value: string) => {
     updateBankAccount({ ifsc_code: value.toUpperCase() });
-    // Reset verification status when IFSC changes
-    if (verificationStatus) {
-      setVerificationStatus(null);
-      setVerificationMessage('');
-      setBankVerificationStatus(null);
-    }
-    lastVerifiedRef.current = '';
   };
 
   const handleAccountNumberChange = (value: string) => {
     updateBankAccount({ account_number: value });
-    // Reset verification status when account number changes
-    if (verificationStatus) {
-      setVerificationStatus(null);
-      setVerificationMessage('');
-      setBankVerificationStatus(null);
-    }
-    lastVerifiedRef.current = '';
   };
 
-  const performVerification = useCallback(async () => {
+  const handleVerify = async () => {
     // Validate fields before verification
     if (!bankAccount.account_number.trim()) {
+      alert('Please enter account number');
       return;
     }
 
     if (!bankAccount.ifsc_code.trim() || bankAccount.ifsc_code.length !== 11) {
-      return;
-    }
-
-    // Create a unique key for this verification attempt
-    const verificationKey = `${bankAccount.account_number}-${bankAccount.ifsc_code}`;
-    
-    // Skip if we've already verified this exact combination
-    if (lastVerifiedRef.current === verificationKey) {
+      alert('Please enter a valid 11-character IFSC code');
       return;
     }
 
@@ -66,62 +45,33 @@ export function BankAccountStep() {
         ifsc_code: bankAccount.ifsc_code,
       });
 
-      if (result.success) {
+      if (result.success && result.data) {
+        // Extract MICR from response
+        // Response structure: result.data.data.ifsc_details.micr
+        const responseData = result.data.data as { ifsc_details?: { micr?: string } } | undefined;
+        const micr = responseData?.ifsc_details?.micr;
+        
+        // Store MICR if available
+        if (micr) {
+          updateBankAccount({ micr });
+        }
+
         setVerificationStatus('success');
         setVerificationMessage(result.message || 'Bank account verified successfully');
         setBankVerificationStatus('success');
-        lastVerifiedRef.current = verificationKey;
       } else {
         setVerificationStatus('error');
         setVerificationMessage(result.message || 'Bank account verification failed');
         setBankVerificationStatus('error');
-        lastVerifiedRef.current = '';
       }
     } catch (error) {
       setVerificationStatus('error');
       setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify bank account. Please try again.');
       setBankVerificationStatus('error');
-      lastVerifiedRef.current = '';
     } finally {
       setIsVerifying(false);
     }
-  }, [bankAccount.account_number, bankAccount.ifsc_code, setBankVerificationStatus]);
-
-  // Auto-verify when both account number and IFSC are entered
-  useEffect(() => {
-    const canVerify = 
-      bankAccount.account_number.trim() &&
-      bankAccount.ifsc_code.trim() &&
-      bankAccount.ifsc_code.length === 11;
-
-    if (canVerify) {
-      // Clear existing timeout
-      if (verificationTimeoutRef.current) {
-        clearTimeout(verificationTimeoutRef.current);
-      }
-
-      // Debounce verification by 800ms after user stops typing
-      verificationTimeoutRef.current = window.setTimeout(() => {
-        performVerification();
-      }, 800);
-    } else {
-      // Reset status if fields are incomplete
-      setVerificationStatus((prevStatus) => {
-        if (prevStatus && prevStatus !== 'error') {
-          setBankVerificationStatus(null);
-          return null;
-        }
-        return prevStatus;
-      });
-      setVerificationMessage('');
-    }
-
-    return () => {
-      if (verificationTimeoutRef.current) {
-        clearTimeout(verificationTimeoutRef.current);
-      }
-    };
-  }, [bankAccount.account_number, bankAccount.ifsc_code, performVerification, setBankVerificationStatus]);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -209,6 +159,18 @@ export function BankAccountStep() {
               <p className="text-sm text-muted-foreground">
                 11-character IFSC code (e.g., SBIN0001234)
               </p>
+            </div>
+
+            {/* Verify Button */}
+            <div className="flex justify-end">
+              <Button 
+                onClick={handleVerify} 
+                disabled={isVerifying}
+                className="gap-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                {isVerifying ? 'Verifying...' : 'Verify Bank Account'}
+              </Button>
             </div>
 
             {/* Bank Account Verification Status */}

@@ -87,6 +87,12 @@ interface SupplierUpdatePayload {
   // MSME / Udyam
   custom_msme__udyam_number?: string;
   custom_msme_certificate_?: string;
+  // MSME verification details
+  custom_name_of_enterprise?: string;
+  custom_major_activity?: string;
+  custom_date_of_commencement?: string;
+  custom_organization_of_type?: string;
+  custom_address?: string;
 }
 
 interface AddressPayload {
@@ -329,6 +335,92 @@ export async function updateAuthorizedDistributors(
 }
 
 /**
+ * Update MSME Details child table entries
+ * This function handles creating/updating child table entries for MSME Details
+ */
+export async function updateMSMEDetails(
+  supplierName: string,
+  msmeDetails: Array<{
+    classification_year: string;
+    enterprise_type: string;
+    classification_date: string;
+  }>
+): Promise<void> {
+  // First, get the current supplier to check existing child table entries
+  const supplierResponse = await fetch(
+    `${API_BASE_URL}/api/resource/Supplier/${encodeURIComponent(supplierName)}`,
+    {
+      method: 'GET',
+      headers: getHeaders(),
+    }
+  );
+
+  if (!supplierResponse.ok) {
+    throw new Error('Failed to fetch supplier data');
+  }
+
+  const supplierData = await supplierResponse.json();
+  // The child table field name is custom_enterprise_type_list
+  const existingEntries = supplierData.data?.custom_enterprise_type_list || [];
+
+  // Delete existing entries if any
+  for (const entry of existingEntries) {
+    if (entry.name) {
+      try {
+        await fetch(
+          `${API_BASE_URL}/api/resource/MSME Details/${encodeURIComponent(entry.name)}`,
+          {
+            method: 'DELETE',
+            headers: getHeaders(),
+          }
+        );
+      } catch (error) {
+        console.warn('Failed to delete existing MSME Details entry:', error);
+      }
+    }
+  }
+
+  // Create new entries
+  console.log('Creating MSME Details entries:', msmeDetails);
+  
+  for (const detail of msmeDetails) {
+    if (detail.classification_year && detail.enterprise_type) {
+      const payload = {
+        doctype: 'MSME Details',
+        parent: supplierName,
+        parenttype: 'Supplier',
+        parentfield: 'custom_enterprise_type_list',
+        // Map fields: name_of_enterprise field stores classification_year (label: "Classification year")
+        name_of_enterprise: detail.classification_year || '',
+        // Map fields: major_activity field stores enterprise_type (label: "Enterprise type")
+        major_activity: detail.enterprise_type || '',
+        // Map fields: date_of_commencement field stores classification_date (label: "Classification date")
+        date_of_commencement: detail.classification_date || '',
+      };
+
+      console.log('MSME Details payload:', payload);
+
+      const response = await fetch(`${API_BASE_URL}/api/resource/MSME Details`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error(`Failed to create MSME Details entry for ${detail.classification_year}:`, error);
+        // Continue with other entries even if one fails
+      } else {
+        const result = await response.json();
+        console.log(`Successfully created MSME Details entry for ${detail.classification_year}:`, result);
+      }
+    } else {
+      console.warn('Skipping MSME Details entry - missing required fields:', detail);
+    }
+  }
+}
+
+/**
  * Update bank account child table entries in Supplier
  * This function handles creating/updating child table entries for bank accounts
  */
@@ -340,6 +432,7 @@ export async function updateSupplierBankAccounts(
     ifsc_code: string;
     bank_name: string;
     branch_name: string;
+    micr?: string;
   }
 ): Promise<void> {
   // First, get the current supplier to check existing child table entries
@@ -376,7 +469,18 @@ export async function updateSupplierBankAccounts(
   }
 
   // Create new bank account entry
-  const payload = {
+  const payload: {
+    doctype: string;
+    parent: string;
+    parenttype: string;
+    parentfield: string;
+    account_holder_name: string;
+    account_number: string;
+    ifsc_code: string;
+    bank_name: string;
+    branch_name: string;
+    micr?: string;
+  } = {
     doctype: 'Supplier Bank Account',
     parent: supplierName,
     parenttype: 'Supplier',
@@ -387,6 +491,11 @@ export async function updateSupplierBankAccounts(
     bank_name: bankAccountData.bank_name,
     branch_name: bankAccountData.branch_name,
   };
+
+  // Add MICR if available
+  if (bankAccountData.micr) {
+    payload.micr = bankAccountData.micr;
+  }
 
   const response = await fetch(`${API_BASE_URL}/api/resource/Supplier Bank Account`, {
     method: 'POST',
@@ -588,6 +697,7 @@ export async function submitOnboardingData(
       ifsc_code: string;
       bank_name: string;
       branch_name: string;
+      micr?: string;
     };
     drugLicense?: {
       drug_license_number: string;
@@ -597,6 +707,18 @@ export async function submitOnboardingData(
       msme_status: string;
       msme_number: string;
       msme_document?: File | null;
+      verification_data?: {
+        name_of_enterprise?: string;
+        major_activity?: string;
+        date_of_commencement?: string;
+        organization_type?: string;
+        address?: string;
+        enterprise_type_list?: Array<{
+          classification_year: string;
+          enterprise_type: string;
+          classification_date: string;
+        }>;
+      };
     };
     contactInformation?: {
       transaction_name: string;
@@ -704,6 +826,11 @@ export async function submitOnboardingData(
     }
 
     // 2. Update supplier main document with all form data
+    // Log MSME verification data for debugging
+    if (formData.msmeStatus?.verification_data) {
+      console.log('MSME Verification Data to be posted:', formData.msmeStatus.verification_data);
+    }
+
     const supplierPayload: SupplierUpdatePayload = {
       supplier_name: formData.basicInfo.company_name,
       email_id: formData.basicInfo.email,
@@ -722,6 +849,14 @@ export async function submitOnboardingData(
       // MSME / Udyam
       ...(formData.msmeStatus && formData.msmeStatus.msme_status === 'yes' && {
         custom_msme__udyam_number: formData.msmeStatus.msme_number || '',
+        // MSME verification details from API response - always include if verification_data exists
+        ...(formData.msmeStatus.verification_data ? {
+          custom_name_of_enterprise: formData.msmeStatus.verification_data.name_of_enterprise || '',
+          custom_major_activity: formData.msmeStatus.verification_data.major_activity || '',
+          custom_date_of_commencement: formData.msmeStatus.verification_data.date_of_commencement || '',
+          custom_organization_of_type: formData.msmeStatus.verification_data.organization_type || '',
+          custom_address: formData.msmeStatus.verification_data.address || '',
+        } : {}),
       }),
       // Contact Information - Transaction
       ...(formData.contactInformation && {
@@ -776,6 +911,16 @@ export async function submitOnboardingData(
       custom_verification_status: 'Pending for verification',
     };
 
+    // Log the payload to verify MSME fields are included
+    console.log('Supplier Payload with MSME fields:', {
+      custom_msme__udyam_number: supplierPayload.custom_msme__udyam_number,
+      custom_name_of_enterprise: supplierPayload.custom_name_of_enterprise,
+      custom_major_activity: supplierPayload.custom_major_activity,
+      custom_date_of_commencement: supplierPayload.custom_date_of_commencement,
+      custom_organization_of_type: supplierPayload.custom_organization_of_type,
+      custom_address: supplierPayload.custom_address,
+    });
+
     await updateSupplier(supplierName, supplierPayload);
 
     // 3. Ensure portal user link is created for this supplier
@@ -786,7 +931,29 @@ export async function submitOnboardingData(
       console.error('Failed to link portal user for supplier:', error);
     }
 
-    // 4. Update authorized distributors child table if applicable
+    // 4. Update MSME Details child table if MSME verification data exists
+    console.log('Checking MSME verification data for child table:', {
+      hasVerificationData: !!formData.msmeStatus?.verification_data,
+      hasEnterpriseTypeList: !!formData.msmeStatus?.verification_data?.enterprise_type_list,
+      enterpriseTypeListLength: formData.msmeStatus?.verification_data?.enterprise_type_list?.length || 0,
+      enterpriseTypeList: formData.msmeStatus?.verification_data?.enterprise_type_list,
+    });
+
+    if (formData.msmeStatus?.verification_data?.enterprise_type_list && 
+        formData.msmeStatus.verification_data.enterprise_type_list.length > 0) {
+      try {
+        console.log('Calling updateMSMEDetails with:', formData.msmeStatus.verification_data.enterprise_type_list);
+        await updateMSMEDetails(supplierName, formData.msmeStatus.verification_data.enterprise_type_list);
+        console.log('Successfully updated MSME Details child table');
+      } catch (error) {
+        console.error('Failed to update MSME Details:', error);
+        // Continue with submission even if child table update fails
+      }
+    } else {
+      console.warn('MSME Details child table not updated - no enterprise_type_list data available');
+    }
+
+    // 5. Update authorized distributors child table if applicable
     if (formData.commercialDetails?.is_authorized_distributor === 'Yes' && authorizedDistributorData.length > 0) {
       try {
         await updateAuthorizedDistributors(supplierName, authorizedDistributorData);
@@ -795,7 +962,7 @@ export async function submitOnboardingData(
         // Continue with submission even if child table update fails
       }
     } else if (formData.commercialDetails?.is_authorized_distributor === 'No') {
-      // 5. Clear existing entries if user selected "No"
+      // 6. Clear existing entries if user selected "No"
       try {
         await updateAuthorizedDistributors(supplierName, []);
       } catch (error) {
@@ -847,6 +1014,7 @@ export async function submitOnboardingData(
         ifsc_code: formData.bankAccount.ifsc_code,
         bank_name: formData.bankAccount.bank_name,
         branch_name: formData.bankAccount.branch_name,
+        micr: formData.bankAccount.micr,
       });
     } catch (error) {
       console.error('Failed to update bank account child table:', error);
