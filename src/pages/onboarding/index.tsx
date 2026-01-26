@@ -118,7 +118,7 @@ export function OnboardingPage() {
           <CardContent className="pt-6 flex flex-col items-center gap-4">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="text-muted-foreground text-center">
-              Loading your onboarding form...
+              Loading your onboarding form....
             </p>
           </CardContent>
         </Card>
