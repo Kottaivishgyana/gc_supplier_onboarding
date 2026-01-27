@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreditCard, Upload, X, FileText, User, CalendarDays, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { CreditCard, Upload, X, FileText, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,9 +24,8 @@ export function PANDetailsStep() {
 
   const handleVerify = async () => {
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
 
-    // Validate fields before verification
+    // Validate only PAN number before verification
     if (!panDetails.pan_number.trim()) {
       alert('Please enter PAN number');
       return;
@@ -34,21 +33,6 @@ export function PANDetailsStep() {
 
     if (!panRegex.test(panDetails.pan_number)) {
       alert('Please enter a valid PAN number (e.g., ABCDE1234F)');
-      return;
-    }
-
-    if (!panDetails.full_name.trim()) {
-      alert('Please enter full name (as per PAN)');
-      return;
-    }
-
-    if (!panDetails.dob) {
-      alert('Please select date of birth');
-      return;
-    }
-
-    if (!dobRegex.test(panDetails.dob)) {
-      alert('Please enter date of birth in YYYY-MM-DD format');
       return;
     }
 
@@ -60,11 +44,30 @@ export function PANDetailsStep() {
     try {
       const result = await verifyPAN({
         pan_number: panDetails.pan_number,
-        full_name: panDetails.full_name,
-        dob: panDetails.dob,
       });
 
-      if (result.success) {
+      console.log('PAN Verification Response:', result);
+
+      if (result.success && result.data) {
+        // Auto-fill name and DOB from API response
+        const responseData = result.data.data;
+        if (responseData) {
+          const updates: { full_name?: string; dob?: string } = {};
+          
+          if (responseData.full_name) {
+            updates.full_name = responseData.full_name;
+          }
+          
+          if (responseData.dob) {
+            updates.dob = responseData.dob;
+          }
+          
+          // Update form data with extracted values
+          if (Object.keys(updates).length > 0) {
+            updatePANDetails(updates);
+          }
+        }
+        
         setVerificationStatus('success');
         setVerificationMessage(result.message || 'PAN verified successfully');
         setPANVerificationStatus('success');
@@ -115,44 +118,6 @@ export function PANDetailsStep() {
               </p>
             </div>
 
-            {/* Full Name (as per PAN) */}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="pan_full_name">
-                Full Name (as per PAN) <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="pan_full_name"
-                  placeholder="Enter full name"
-                  value={panDetails.full_name}
-                  onChange={(e) => {
-                    updatePANDetails({ full_name: e.target.value });
-                  }}
-                  className="pr-12 h-14"
-                />
-                <User className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Date of Birth */}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="pan_dob">
-                Date of Birth <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="pan_dob"
-                  type="date"
-                  value={panDetails.dob}
-                  onChange={(e) => {
-                    updatePANDetails({ dob: e.target.value });
-                  }}
-                  className="pr-12 h-14"
-                />
-                <CalendarDays className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-              </div>
-            </div>
-
             {/* Verify Button */}
             <div className="flex justify-end">
               <Button 
@@ -165,6 +130,36 @@ export function PANDetailsStep() {
               </Button>
             </div>
 
+            {/* Display Name and DOB (Read-only after verification) */}
+            {panDetails.full_name && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="pan_full_name_display">
+                  Full Name (from PAN)
+                </Label>
+                <Input
+                  id="pan_full_name_display"
+                  value={panDetails.full_name}
+                  readOnly
+                  className="h-14 bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+            )}
+
+            {panDetails.dob && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="pan_dob_display">
+                  Date of Birth (from PAN)
+                </Label>
+                <Input
+                  id="pan_dob_display"
+                  type="date"
+                  value={panDetails.dob}
+                  readOnly
+                  className="h-14 bg-slate-50 dark:bg-slate-900"
+                />
+              </div>
+            )}
+
             {/* PAN Verification Status */}
             {(isVerifying || verificationStatus) && (
               <div className="flex flex-col gap-3">
@@ -176,20 +171,23 @@ export function PANDetailsStep() {
                 )}
 
                 {verificationStatus && !isVerifying && (
-                  <div
-                    className={`flex items-center gap-2 p-3 rounded-lg ${
-                      verificationStatus === 'success'
-                        ? 'bg-green-50 text-green-800 border border-green-200'
-                        : 'bg-red-50 text-red-800 border border-red-200'
-                    }`}
-                  >
-                    {verificationStatus === 'success' ? (
-                      <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                    )}
-                    <span className="text-sm font-medium">{verificationMessage}</span>
-                  </div>
+                  <>
+                    <div
+                      className={`flex items-center gap-2 p-3 rounded-lg ${
+                        verificationStatus === 'success'
+                          ? 'bg-green-50 text-green-800 border border-green-200'
+                          : 'bg-red-50 text-red-800 border border-red-200'
+                      }`}
+                    >
+                      {verificationStatus === 'success' ? (
+                        <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      )}
+                      <span className="text-sm font-medium">{verificationMessage}</span>
+                    </div>
+
+                  </>
                 )}
               </div>
             )}

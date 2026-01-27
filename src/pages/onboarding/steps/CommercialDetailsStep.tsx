@@ -148,11 +148,46 @@ export function CommercialDetailsStep() {
                       <Input
                         id="invoice_discount_percentage"
                         type="number"
-                        placeholder="Enter percentage"
+                        placeholder="Enter percentage (0-100)"
                         value={commercialDetails.invoice_discount_percentage}
                         onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9.]/g, '').slice(0, 5);
-                          updateCommercialDetails({ invoice_discount_percentage: value });
+                          let value = e.target.value.replace(/[^0-9.]/g, '');
+                          
+                          // Prevent multiple decimal points
+                          const parts = value.split('.');
+                          if (parts.length > 2) {
+                            value = parts[0] + '.' + parts.slice(1).join('');
+                          }
+                          
+                          // Limit decimal places to 2
+                          if (parts.length === 2 && parts[1].length > 2) {
+                            value = parts[0] + '.' + parts[1].slice(0, 2);
+                          }
+                          
+                          // Validate and restrict to 0-100 range
+                          const numValue = parseFloat(value);
+                          if (value === '' || value === '.') {
+                            updateCommercialDetails({ invoice_discount_percentage: value });
+                          } else if (!isNaN(numValue)) {
+                            if (numValue > 100) {
+                              updateCommercialDetails({ invoice_discount_percentage: '100' });
+                            } else if (numValue < 0) {
+                              updateCommercialDetails({ invoice_discount_percentage: '0' });
+                            } else {
+                              updateCommercialDetails({ invoice_discount_percentage: value });
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          const numValue = parseFloat(value);
+                          if (value && !isNaN(numValue)) {
+                            if (numValue > 100) {
+                              updateCommercialDetails({ invoice_discount_percentage: '100' });
+                            } else if (numValue < 0) {
+                              updateCommercialDetails({ invoice_discount_percentage: '0' });
+                            }
+                          }
                         }}
                         className="pr-12 h-14"
                         min="0"
@@ -161,6 +196,12 @@ export function CommercialDetailsStep() {
                       />
                       <Percent className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
                     </div>
+                    {commercialDetails.invoice_discount_percentage && 
+                     parseFloat(commercialDetails.invoice_discount_percentage) > 100 && (
+                      <p className="text-sm text-destructive ml-4">
+                        Percentage cannot exceed 100%
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -347,11 +388,46 @@ export function CommercialDetailsStep() {
                   <Input
                     id="return_short_expiry_percentage"
                     type="number"
-                    placeholder="Enter percentage"
+                    placeholder="Enter percentage (0-100)"
                     value={commercialDetails.return_short_expiry_percentage}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '').slice(0, 5);
-                      updateCommercialDetails({ return_short_expiry_percentage: value });
+                      let value = e.target.value.replace(/[^0-9.]/g, '');
+                      
+                      // Prevent multiple decimal points
+                      const parts = value.split('.');
+                      if (parts.length > 2) {
+                        value = parts[0] + '.' + parts.slice(1).join('');
+                      }
+                      
+                      // Limit decimal places to 2
+                      if (parts.length === 2 && parts[1].length > 2) {
+                        value = parts[0] + '.' + parts[1].slice(0, 2);
+                      }
+                      
+                      // Validate and restrict to 0-100 range
+                      const numValue = parseFloat(value);
+                      if (value === '' || value === '.') {
+                        updateCommercialDetails({ return_short_expiry_percentage: value });
+                      } else if (!isNaN(numValue)) {
+                        if (numValue > 100) {
+                          updateCommercialDetails({ return_short_expiry_percentage: '100' });
+                        } else if (numValue < 0) {
+                          updateCommercialDetails({ return_short_expiry_percentage: '0' });
+                        } else {
+                          updateCommercialDetails({ return_short_expiry_percentage: value });
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value && !isNaN(numValue)) {
+                        if (numValue > 100) {
+                          updateCommercialDetails({ return_short_expiry_percentage: '100' });
+                        } else if (numValue < 0) {
+                          updateCommercialDetails({ return_short_expiry_percentage: '0' });
+                        }
+                      }
                     }}
                     className="pr-12 h-14"
                     min="0"
@@ -360,6 +436,12 @@ export function CommercialDetailsStep() {
                   />
                   <Percent className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
                 </div>
+                {commercialDetails.return_short_expiry_percentage && 
+                 parseFloat(commercialDetails.return_short_expiry_percentage) > 100 && (
+                  <p className="text-sm text-destructive">
+                    Percentage cannot exceed 100%
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">
                   CN value: ____%
                 </p>
@@ -401,11 +483,46 @@ export function CommercialDetailsStep() {
                   <Input
                     id="return_expired_percentage"
                     type="number"
-                    placeholder="Enter percentage"
+                    placeholder="Enter percentage (0-100)"
                     value={commercialDetails.return_expired_percentage}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9.]/g, '').slice(0, 5);
-                      updateCommercialDetails({ return_expired_percentage: value });
+                      let value = e.target.value.replace(/[^0-9.]/g, '');
+                      
+                      // Prevent multiple decimal points
+                      const parts = value.split('.');
+                      if (parts.length > 2) {
+                        value = parts[0] + '.' + parts.slice(1).join('');
+                      }
+                      
+                      // Limit decimal places to 2
+                      if (parts.length === 2 && parts[1].length > 2) {
+                        value = parts[0] + '.' + parts[1].slice(0, 2);
+                      }
+                      
+                      // Validate and restrict to 0-100 range
+                      const numValue = parseFloat(value);
+                      if (value === '' || value === '.') {
+                        updateCommercialDetails({ return_expired_percentage: value });
+                      } else if (!isNaN(numValue)) {
+                        if (numValue > 100) {
+                          updateCommercialDetails({ return_expired_percentage: '100' });
+                        } else if (numValue < 0) {
+                          updateCommercialDetails({ return_expired_percentage: '0' });
+                        } else {
+                          updateCommercialDetails({ return_expired_percentage: value });
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value;
+                      const numValue = parseFloat(value);
+                      if (value && !isNaN(numValue)) {
+                        if (numValue > 100) {
+                          updateCommercialDetails({ return_expired_percentage: '100' });
+                        } else if (numValue < 0) {
+                          updateCommercialDetails({ return_expired_percentage: '0' });
+                        }
+                      }
                     }}
                     className="pr-12 h-14"
                     min="0"
@@ -414,6 +531,12 @@ export function CommercialDetailsStep() {
                   />
                   <Percent className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
                 </div>
+                {commercialDetails.return_expired_percentage && 
+                 parseFloat(commercialDetails.return_expired_percentage) > 100 && (
+                  <p className="text-sm text-destructive">
+                    Percentage cannot exceed 100%
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground">
                   CN value: ____%
                 </p>

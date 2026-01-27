@@ -17,33 +17,144 @@ import { getSupplier, submitOnboardingData } from '@/services/erpnextApi';
 // LocalStorage key for caching
 const STORAGE_KEY = 'vendor-onboarding-cache';
 
-// Helper to serialize form data (excluding File objects)
-function serializeFormData(formData: OnboardingFormData): Partial<OnboardingFormData> {
+// Helper to convert File to base64 string
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Helper to convert base64 string back to File
+function base64ToFile(base64: string, fileName: string, mimeType: string): File {
+  const arr = base64.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || mimeType;
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], fileName, { type: mime });
+}
+
+// Helper to serialize form data (converting File objects to base64)
+async function serializeFormData(formData: OnboardingFormData): Promise<Partial<OnboardingFormData> & { 
+  _fileData?: {
+    pan_document?: { base64: string; name: string; type: string };
+    gst_document?: { base64: string; name: string; type: string };
+    drug_license_document?: { base64: string; name: string; type: string };
+    msme_document?: { base64: string; name: string; type: string };
+    authorized_distributors?: Array<{ manufacturer_name: string; document?: { base64: string; name: string; type: string } }>;
+  };
+}> {
+  const fileData: {
+    pan_document?: { base64: string; name: string; type: string };
+    gst_document?: { base64: string; name: string; type: string };
+    drug_license_document?: { base64: string; name: string; type: string };
+    msme_document?: { base64: string; name: string; type: string };
+    authorized_distributors?: Array<{ manufacturer_name: string; document?: { base64: string; name: string; type: string } }>;
+  } = {};
+
+  if (formData.panDetails.pan_document) {
+    try {
+      fileData.pan_document = {
+        base64: await fileToBase64(formData.panDetails.pan_document),
+        name: formData.panDetails.pan_document.name,
+        type: formData.panDetails.pan_document.type,
+      };
+    } catch (error) {
+      console.warn('Failed to serialize PAN document:', error);
+    }
+  }
+
+  if (formData.gstInfo.gst_document) {
+    try {
+      fileData.gst_document = {
+        base64: await fileToBase64(formData.gstInfo.gst_document),
+        name: formData.gstInfo.gst_document.name,
+        type: formData.gstInfo.gst_document.type,
+      };
+    } catch (error) {
+      console.warn('Failed to serialize GST document:', error);
+    }
+  }
+
+  if (formData.drugLicense.drug_license_document) {
+    try {
+      fileData.drug_license_document = {
+        base64: await fileToBase64(formData.drugLicense.drug_license_document),
+        name: formData.drugLicense.drug_license_document.name,
+        type: formData.drugLicense.drug_license_document.type,
+      };
+    } catch (error) {
+      console.warn('Failed to serialize drug license document:', error);
+    }
+  }
+
+  if (formData.msmeStatus.msme_document) {
+    try {
+      fileData.msme_document = {
+        base64: await fileToBase64(formData.msmeStatus.msme_document),
+        name: formData.msmeStatus.msme_document.name,
+        type: formData.msmeStatus.msme_document.type,
+      };
+    } catch (error) {
+      console.warn('Failed to serialize MSME document:', error);
+    }
+  }
+
+  if (formData.commercialDetails.authorized_distributors) {
+    fileData.authorized_distributors = await Promise.all(
+      formData.commercialDetails.authorized_distributors.map(async (item) => {
+        if (item.document) {
+          try {
+            return {
+              manufacturer_name: item.manufacturer_name,
+              document: {
+                base64: await fileToBase64(item.document),
+                name: item.document.name,
+                type: item.document.type,
+              },
+            };
+          } catch (error) {
+            console.warn(`Failed to serialize authorized distributor document for ${item.manufacturer_name}:`, error);
+            return { manufacturer_name: item.manufacturer_name };
+          }
+        }
+        return { manufacturer_name: item.manufacturer_name };
+      })
+    );
+  }
+
   return {
     ...formData,
     panDetails: {
       ...formData.panDetails,
-      pan_document: null, // Files can't be serialized
+      pan_document: null, // File removed, stored in _fileData
     },
     gstInfo: {
       ...formData.gstInfo,
-      gst_document: null, // Files can't be serialized
+      gst_document: null, // File removed, stored in _fileData
     },
     drugLicense: {
       ...formData.drugLicense,
-      drug_license_document: null, // Files can't be serialized
+      drug_license_document: null, // File removed, stored in _fileData
     },
     msmeStatus: {
       ...formData.msmeStatus,
-      msme_document: null, // Files can't be serialized
+      msme_document: null, // File removed, stored in _fileData
     },
     commercialDetails: {
       ...formData.commercialDetails,
       authorized_distributors: formData.commercialDetails.authorized_distributors?.map(item => ({
-        ...item,
-        document: null, // Files can't be serialized
+        manufacturer_name: item.manufacturer_name,
+        document: null, // File removed, stored in _fileData
       })),
     },
+    _fileData: fileData,
   };
 }
 
@@ -104,7 +215,7 @@ function migrateCachedData(data: Partial<OnboardingFormData> | null): Partial<On
   return data;
 }
 
-// Helper to load from localStorage
+// Helper to load from localStorage and restore File objects
 function loadFromCache(supplierId: string | null): Partial<OnboardingFormData> | null {
   if (!supplierId) return null;
   
@@ -112,6 +223,62 @@ function loadFromCache(supplierId: string | null): Partial<OnboardingFormData> |
     const cached = localStorage.getItem(`${STORAGE_KEY}-${supplierId}`);
     if (cached) {
       const parsed = JSON.parse(cached);
+      const fileData = parsed._fileData;
+      
+      // Restore File objects from base64
+      if (fileData) {
+        if (fileData.pan_document) {
+          parsed.panDetails = parsed.panDetails || {};
+          parsed.panDetails.pan_document = base64ToFile(
+            fileData.pan_document.base64,
+            fileData.pan_document.name,
+            fileData.pan_document.type
+          );
+        }
+        
+        if (fileData.gst_document) {
+          parsed.gstInfo = parsed.gstInfo || {};
+          parsed.gstInfo.gst_document = base64ToFile(
+            fileData.gst_document.base64,
+            fileData.gst_document.name,
+            fileData.gst_document.type
+          );
+        }
+        
+        if (fileData.drug_license_document) {
+          parsed.drugLicense = parsed.drugLicense || {};
+          parsed.drugLicense.drug_license_document = base64ToFile(
+            fileData.drug_license_document.base64,
+            fileData.drug_license_document.name,
+            fileData.drug_license_document.type
+          );
+        }
+        
+        if (fileData.msme_document) {
+          parsed.msmeStatus = parsed.msmeStatus || {};
+          parsed.msmeStatus.msme_document = base64ToFile(
+            fileData.msme_document.base64,
+            fileData.msme_document.name,
+            fileData.msme_document.type
+          );
+        }
+        
+        if (fileData.authorized_distributors) {
+          parsed.commercialDetails = parsed.commercialDetails || {};
+          parsed.commercialDetails.authorized_distributors = fileData.authorized_distributors.map((item: { manufacturer_name: string; document?: { base64: string; name: string; type: string } }) => ({
+            manufacturer_name: item.manufacturer_name,
+            document: item.document ? base64ToFile(
+              item.document.base64,
+              item.document.name,
+              item.document.type
+            ) : null,
+          }));
+        }
+      }
+      
+      // Remove _fileData from parsed object
+      delete parsed._fileData;
+      
       // Check if migration is needed
       const needsMigration = 
         parsed.commercialDetails?.invoice_discount_type === 'on_invoice' ||
@@ -131,6 +298,7 @@ function loadFromCache(supplierId: string | null): Partial<OnboardingFormData> |
       if (needsMigration && migrated) {
         // Merge with initial form data to ensure all fields are present
         const fullFormData = { ...INITIAL_FORM_DATA, ...migrated } as OnboardingFormData;
+        // Note: File restoration happens in loadFromCache, so we save without files here
         saveToCache(supplierId, fullFormData);
       }
       
@@ -142,16 +310,18 @@ function loadFromCache(supplierId: string | null): Partial<OnboardingFormData> |
   return null;
 }
 
-// Helper to save to localStorage
+// Helper to save to localStorage (async, fire-and-forget)
 function saveToCache(supplierId: string | null, formData: OnboardingFormData): void {
   if (!supplierId) return;
   
-  try {
-    const serialized = serializeFormData(formData);
-    localStorage.setItem(`${STORAGE_KEY}-${supplierId}`, JSON.stringify(serialized));
-  } catch (error) {
-    console.warn('Failed to save to cache:', error);
-  }
+  // Fire and forget - don't block UI
+  serializeFormData(formData)
+    .then((serialized) => {
+      localStorage.setItem(`${STORAGE_KEY}-${supplierId}`, JSON.stringify(serialized));
+    })
+    .catch((error) => {
+      console.warn('Failed to save to cache:', error);
+    });
 }
 
 // Helper to clear cache

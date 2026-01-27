@@ -7,18 +7,56 @@ const SUREPASS_AUTH_TOKEN = import.meta.env.VITE_SUREPASS_AUTH_TOKEN || '';
 
 interface PANVerifyRequest {
   pan_number: string;
-  full_name: string;
-  dob: string; // YYYY-MM-DD format
+}
+
+interface PANComprehensiveResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    data?: {
+      client_id?: string;
+      pan_number?: string;
+      full_name?: string;
+      full_name_split?: string[];
+      masked_aadhaar?: string;
+      address?: {
+        line_1?: string;
+        line_2?: string;
+        street_name?: string;
+        zip?: string;
+        city?: string;
+        state?: string;
+        country?: string;
+        full?: string;
+      };
+      email?: string | null;
+      phone_number?: string | null;
+      gender?: string;
+      dob?: string;
+      input_dob?: string | null;
+      aadhaar_linked?: boolean;
+      dob_verified?: boolean;
+      dob_check?: boolean;
+      category?: string;
+      status?: string;
+      less_info?: boolean;
+      [key: string]: unknown;
+    };
+    status_code?: number;
+    success?: boolean;
+    message?: string;
+    message_code?: string;
+  };
 }
 
 interface PANVerifyResponse {
   success: boolean;
   message?: string;
-  data?: unknown;
+  data?: PANComprehensiveResponse['data'];
 }
 
 /**
- * Verify PAN details using SurePass API
+ * Verify PAN details using SurePass Comprehensive PAN API
  */
 export async function verifyPAN(data: PANVerifyRequest): Promise<PANVerifyResponse> {
   if (!SUREPASS_BASE_URL) {
@@ -31,7 +69,7 @@ export async function verifyPAN(data: PANVerifyRequest): Promise<PANVerifyRespon
 
   // Remove trailing slash from base URL
   const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/pan/pan-verify`;
+  const url = `${baseUrl}/api/v1/pan/pan-comprehensive`;
 
   try {
     const response = await fetch(url, {
@@ -43,8 +81,7 @@ export async function verifyPAN(data: PANVerifyRequest): Promise<PANVerifyRespon
       },
       body: JSON.stringify({
         id_number: data.pan_number.toUpperCase().trim(),
-        full_name: data.full_name.trim(),
-        dob: data.dob,
+        get_address:true,// Default get address boolean yes
       }),
     });
 

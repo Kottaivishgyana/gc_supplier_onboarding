@@ -16,6 +16,7 @@ import { CommercialDetailsStep, validateCommercialDetails } from './steps/Commer
 import { ReviewSubmitStep, validateReviewSubmit } from './steps/ReviewSubmitStep';
 import { ThankYouPage } from './ThankYouPage';
 import { useOnboardingStore } from '@/stores/onboardingStore';
+// import { generateSamplePDF } from '@/utils/generateSamplePDF';
 
 export function OnboardingPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -35,6 +36,17 @@ export function OnboardingPage() {
   useEffect(() => {
     initializeFromUrl();
   }, [initializeFromUrl]);
+
+  // Auto-download sample PDF on page load
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     generateSamplePDF().catch((error) => {
+  //       console.error('Sample PDF generation failed:', error);
+  //     });
+  //   }, 2000); // Wait 2 seconds after page load
+
+  //   return () => clearTimeout(timer);
+  // }, []);
 
 
   const validateCurrentStep = (): boolean => {

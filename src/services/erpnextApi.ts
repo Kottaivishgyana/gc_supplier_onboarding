@@ -87,6 +87,12 @@ interface SupplierUpdatePayload {
   // MSME / Udyam
   custom_msme__udyam_number?: string;
   custom_msme_certificate_?: string;
+  // MSME registration and type fields
+  custom_msme_registration_no?: string;
+  custom_msme_type?: string;
+  // Contract status
+  custom_contract_done?: string;
+  custom_msme_registered?: string;
   // MSME verification details
   custom_name_of_enterprise?: string;
   custom_major_activity?: string;
@@ -849,6 +855,13 @@ export async function submitOnboardingData(
       // MSME / Udyam
       ...(formData.msmeStatus && formData.msmeStatus.msme_status === 'yes' && {
         custom_msme__udyam_number: formData.msmeStatus.msme_number || '',
+        // MSME registration number (same as udyam number)
+        custom_msme_registration_no: formData.msmeStatus.msme_number || '',
+        // MSME type from enterprise_type_list (get first entry's enterprise_type)
+        custom_msme_type: formData.msmeStatus.verification_data?.enterprise_type_list && 
+                          formData.msmeStatus.verification_data.enterprise_type_list.length > 0
+          ? formData.msmeStatus.verification_data.enterprise_type_list[0].enterprise_type || ''
+          : '',
         // MSME verification details from API response - always include if verification_data exists
         ...(formData.msmeStatus.verification_data ? {
           custom_name_of_enterprise: formData.msmeStatus.verification_data.name_of_enterprise || '',
@@ -858,6 +871,9 @@ export async function submitOnboardingData(
           custom_address: formData.msmeStatus.verification_data.address || '',
         } : {}),
       }),
+      // Contract done - default to "yes" for all suppliers
+      custom_contract_done: 'Yes',
+      custom_msme_registered:'Yes',
       // Contact Information - Transaction
       ...(formData.contactInformation && {
         custom_transaction_contact_name: formData.contactInformation.transaction_name,
@@ -914,6 +930,9 @@ export async function submitOnboardingData(
     // Log the payload to verify MSME fields are included
     console.log('Supplier Payload with MSME fields:', {
       custom_msme__udyam_number: supplierPayload.custom_msme__udyam_number,
+      custom_msme_registration_no: supplierPayload.custom_msme_registration_no,
+      custom_msme_type: supplierPayload.custom_msme_type,
+      custom_contract_done: supplierPayload.custom_contract_done,
       custom_name_of_enterprise: supplierPayload.custom_name_of_enterprise,
       custom_major_activity: supplierPayload.custom_major_activity,
       custom_date_of_commencement: supplierPayload.custom_date_of_commencement,

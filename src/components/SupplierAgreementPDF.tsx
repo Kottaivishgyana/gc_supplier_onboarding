@@ -338,7 +338,7 @@ export function SupplierAgreementPDF({
         </View>
 
         {/* Contact of Supplier Table */}
-        <View style={[styles.table, { marginTop: 15 }]}>
+        <View style={[styles.table, { marginTop: 15, marginBottom: 30 }]}>
           <View style={[styles.tableRow, styles.tableHeader]}>
             <Text style={[styles.tableCellSno, styles.tableHeaderText]}>S.No</Text>
             <Text style={[styles.tableCellField, styles.tableHeaderText]}>Field</Text>
@@ -409,7 +409,7 @@ export function SupplierAgreementPDF({
         </View>
 
         {/* Remaining Details Table */}
-        <View style={[styles.table, { marginTop: 15 }]}>
+        <View style={[styles.table, { marginTop: 15, marginBottom: 0 }]}>
           <View style={[styles.tableRow, styles.tableHeader]}>
             <Text style={[styles.tableCellSno, styles.tableHeaderText]}>S.No</Text>
             <Text style={[styles.tableCellField, styles.tableHeaderText]}>Field</Text>
@@ -446,11 +446,9 @@ export function SupplierAgreementPDF({
             </Text>
           </View>
         </View>
-      </PageWithImage>
 
-      {/* Page 2: Bank Details Table */}
-      <PageWithImage geriCareImageBase64={geriCareImageBase64}>
-        <View style={styles.table}>
+        {/* Bank Details Table */}
+        <View style={[styles.table, { marginTop: 15 }]}>
           <View style={[styles.tableRow, styles.tableHeader]}>
             <Text style={[styles.tableCellSno, styles.tableHeaderText]}>S.No</Text>
             <Text style={[styles.tableCellField, styles.tableHeaderText]}>Field</Text>

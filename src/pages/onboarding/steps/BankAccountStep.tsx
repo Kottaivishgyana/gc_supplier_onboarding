@@ -46,14 +46,36 @@ export function BankAccountStep() {
       });
 
       if (result.success && result.data) {
-        // Extract MICR from response
-        // Response structure: result.data.data.ifsc_details.micr
-        const responseData = result.data.data as { ifsc_details?: { micr?: string } } | undefined;
-        const micr = responseData?.ifsc_details?.micr;
+        // Extract bank details from response
+        // Response structure: result.data.data.ifsc_details
+        const responseData = result.data.data as { 
+          ifsc_details?: { 
+            micr?: string;
+            bank_name?: string;
+            branch?: string;
+          } 
+        } | undefined;
         
-        // Store MICR if available
-        if (micr) {
-          updateBankAccount({ micr });
+        const ifscDetails = responseData?.ifsc_details;
+        
+        // Update bank account fields with verified data
+        const updates: { micr?: string; bank_name?: string; branch_name?: string } = {};
+        
+        if (ifscDetails?.micr) {
+          updates.micr = ifscDetails.micr;
+        }
+        
+        if (ifscDetails?.bank_name) {
+          updates.bank_name = ifscDetails.bank_name;
+        }
+        
+        if (ifscDetails?.branch) {
+          updates.branch_name = ifscDetails.branch;
+        }
+        
+        // Update bank account with extracted data
+        if (Object.keys(updates).length > 0) {
+          updateBankAccount(updates);
         }
 
         setVerificationStatus('success');
