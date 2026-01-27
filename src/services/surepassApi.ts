@@ -341,6 +341,10 @@ export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyRes
   const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
   const url = `${baseUrl}/api/v1/corporate/udyog-aadhaar`;
 
+  // Create AbortController for timeout handling
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 30 seconds timeout
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -352,7 +356,10 @@ export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyRes
       body: JSON.stringify({
         id_number: data.uan.toUpperCase().trim(),
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     const responseData = await response.json().catch(() => ({}));
 
@@ -380,6 +387,22 @@ export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyRes
       data: responseData,
     };
   } catch (error) {
+    clearTimeout(timeoutId);
+    
+    // Check if it's a timeout/abort error or network error
+    if (error instanceof Error) {
+      if (error.name === 'AbortError' || 
+          error.message.includes('timeout') || 
+          error.message.includes('aborted') ||
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('network')) {
+        return {
+          success: false,
+          message: 'Server busy try after sometime',
+        };
+      }
+    }
+    
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to verify MSME. Please try again.',

@@ -114,12 +114,32 @@ export function MSMEStatusStep() {
         }
       } else {
         setVerificationStatus('error');
-        setVerificationMessage(result.message || 'MSME verification failed');
+        // Check if error message indicates server busy/timeout
+        const errorMsg = result.message || 'MSME verification failed';
+        const isServerBusy = errorMsg.toLowerCase().includes('server busy') || 
+                            errorMsg.toLowerCase().includes('timeout') ||
+                            errorMsg.toLowerCase().includes('try after');
+        setVerificationMessage(isServerBusy ? 'Server busy try after sometime' : errorMsg);
         setMSMEVerificationStatus('error');
       }
     } catch (error) {
       setVerificationStatus('error');
-      setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify MSME. Please try again.');
+      
+      // Check for timeout or server busy errors
+      let errorMsg = 'Failed to verify MSME. Please try again.';
+      if (error instanceof Error) {
+        if (error.name === 'AbortError' || 
+            error.message.includes('timeout') || 
+            error.message.includes('aborted') ||
+            error.message.includes('Server busy') ||
+            error.message.includes('Failed to fetch')) {
+          errorMsg = 'Server busy try after sometime';
+        } else {
+          errorMsg = error.message;
+        }
+      }
+      
+      setVerificationMessage(errorMsg);
       setMSMEVerificationStatus('error');
     } finally {
       setIsVerifying(false);
