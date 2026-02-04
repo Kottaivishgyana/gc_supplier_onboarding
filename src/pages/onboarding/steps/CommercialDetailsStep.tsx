@@ -1,4 +1,5 @@
 import { Calendar, Truck, Percent, FileText, RotateCcw, Plus, X, Upload } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -563,68 +564,71 @@ export function validateCommercialDetails(data: {
   return_damage_type: string;
   return_expired_percentage: string;
 }): boolean {
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   if (!data.discount_basis) {
-    alert('Please select discount basis (On PTS/On PTR/On MRP)');
+    message.error({ content: 'Please select discount basis (On PTS/On PTR/On MRP)', key: 'validation-error' });
     return false;
   }
   if (!data.invoice_discount_type) {
-    alert('Please select invoice discount type (On Invoice/Off Invoice)');
+    message.error({ content: 'Please select invoice discount type (On Invoice/Off Invoice)', key: 'validation-error' });
     return false;
   }
   if (!data.invoice_discount_percentage.trim()) {
-    alert('Please enter invoice discount percentage');
+    message.error({ content: 'Please enter invoice discount percentage', key: 'validation-error' });
     return false;
   }
   const invoiceDiscount = parseFloat(data.invoice_discount_percentage);
   if (isNaN(invoiceDiscount) || invoiceDiscount < 0 || invoiceDiscount > 100) {
-    alert('Please enter a valid discount percentage (0-100)');
+    message.error({ content: 'Please enter a valid discount percentage (0-100)', key: 'validation-error' });
     return false;
   }
   if (!data.is_authorized_distributor) {
-    alert('Please select if you are a Manufacturer\'s Authorized distributor');
+    message.error({ content: 'Please select if you are a Manufacturer\'s Authorized distributor', key: 'validation-error' });
     return false;
   }
   if (data.is_authorized_distributor === 'Yes') {
     if (!data.authorized_distributors || data.authorized_distributors.length === 0) {
-      alert('Please add at least one manufacturer with authorized distributor details');
+      message.error({ content: 'Please add at least one manufacturer with authorized distributor details', key: 'validation-error' });
       return false;
     }
     for (let i = 0; i < data.authorized_distributors.length; i++) {
       const item = data.authorized_distributors[i];
       if (!item.manufacturer_name.trim()) {
-        alert(`Please enter manufacturer name for item ${i + 1}`);
+        message.error({ content: `Please enter manufacturer name for item ${i + 1}`, key: 'validation-error' });
         return false;
       }
       if (!item.document) {
-        alert(`Please upload document for ${item.manufacturer_name || `item ${i + 1}`}`);
+        message.error({ content: `Please upload document for ${item.manufacturer_name || `item ${i + 1}`}`, key: 'validation-error' });
         return false;
       }
       if (item.document.size > 5 * 1024 * 1024) {
-        alert(`Document for ${item.manufacturer_name} exceeds 5MB limit`);
+        message.error({ content: `Document for ${item.manufacturer_name} exceeds 5MB limit`, key: 'validation-error' });
         return false;
       }
     }
   }
   if (!data.return_short_expiry_percentage.trim()) {
-    alert('Please enter return percentage for short expiry items');
+    message.error({ content: 'Please enter return percentage for short expiry items', key: 'validation-error' });
     return false;
   }
   const shortExpiry = parseFloat(data.return_short_expiry_percentage);
   if (isNaN(shortExpiry) || shortExpiry < 0 || shortExpiry > 100) {
-    alert('Please enter a valid short expiry return percentage (0-100)');
+    message.error({ content: 'Please enter a valid short expiry return percentage (0-100)', key: 'validation-error' });
     return false;
   }
   if (!data.return_damage_type) {
-    alert('Please select return policy for damaged items');
+    message.error({ content: 'Please select return policy for damaged items', key: 'validation-error' });
     return false;
   }
   if (!data.return_expired_percentage.trim()) {
-    alert('Please enter return percentage for expired items');
+    message.error({ content: 'Please enter return percentage for expired items', key: 'validation-error' });
     return false;
   }
   const expired = parseFloat(data.return_expired_percentage);
   if (isNaN(expired) || expired < 0 || expired > 100) {
-    alert('Please enter a valid expired return percentage (0-100)');
+    message.error({ content: 'Please enter a valid expired return percentage (0-100)', key: 'validation-error' });
     return false;
   }
   return true;

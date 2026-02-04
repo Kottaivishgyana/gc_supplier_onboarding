@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Store, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,14 +21,15 @@ export function MSMEStatusStep() {
   };
 
   const handleVerify = async () => {
+    message.destroy();
     if (msmeStatus.msme_status !== 'yes') {
-      alert('Please select MSME status as Yes');
+      message.error({ content: 'Please select MSME status as Yes', key: 'validation-error' });
       return;
     }
 
     // Validate MSME number before verification
     if (!msmeStatus.msme_number.trim()) {
-      alert('Please enter Udyam Registration Number');
+      message.error({ content: 'Please enter Udyam Registration Number', key: 'validation-error' });
       return;
     }
 
@@ -111,6 +113,7 @@ export function MSMEStatusStep() {
           setVerificationStatus('error');
           setVerificationMessage('MSME verification failed: Invalid response structure');
           setMSMEVerificationStatus('error');
+          
         }
       } else {
         setVerificationStatus('error');
@@ -119,6 +122,7 @@ export function MSMEStatusStep() {
         const isServerBusy = errorMsg.toLowerCase().includes('server busy') || 
                             errorMsg.toLowerCase().includes('timeout') ||
                             errorMsg.toLowerCase().includes('try after');
+                            errorMsg.toLowerCase().includes('network error');
         setVerificationMessage(isServerBusy ? 'Server busy try after sometime' : errorMsg);
         setMSMEVerificationStatus('error');
       }
@@ -282,13 +286,16 @@ export function validateMSMEStatus(data: {
   msme_status: string;
   msme_number: string;
 }): boolean {
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   if (!data.msme_status) {
-    alert('Please select MSME registration status');
+    message.error({ content: 'Please select MSME registration status', key: 'validation-error' });
     return false;
   }
   if (data.msme_status === 'yes') {
     if (!data.msme_number.trim()) {
-      alert('Please enter Udyam Registration Number');
+      message.error({ content: 'Please enter Udyam Registration Number', key: 'validation-error' });
       return false;
     }
   }

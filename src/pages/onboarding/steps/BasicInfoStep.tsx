@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Building2, Mail, Phone, MapPin, AlertCircle } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -344,69 +345,72 @@ export function validateBasicInfo(data: {
   billing_state: string;
   billing_pincode: string;
 }): boolean {
+  message.destroy();
+
   if (!data.company_name.trim()) {
-    alert('Please enter supplier name');
+    message.error({content: 'Please enter supplier name',key: 'validation-error'});
     return false;
   }
   if (!data.email.trim() || !data.email.includes('@')) {
-    alert('Please enter a valid email address');
+    message.error({content: 'Please enter a valid email address',key: 'validation-error'});
     return false;
   }
   if (!data.phone.trim()) {
-    alert('Please enter phone number');
+    message.error({content: 'Please enter phone number',key: 'validation-error'});
     return false;
   }
   if (!data.business_type) {
-    alert('Please select business type');
+    message.error({content: 'Please select business type',key: 'validation-error'});
     return false;
   }
   if (!data.address.trim()) {
-    alert('Please enter registered address');
+    message.error({content: 'Please enter registered address',key: 'validation-error'});
     return false;
   }
   if (!data.city.trim()) {
-    alert('Please enter city');
+    message.error({content: 'Please enter city',key: 'validation-error'});
     return false;
   }
   if (!data.state) {
-    alert('Please select state');
+    message.error({content: 'Please select state',key: 'validation-error'});
     return false;
   }
   if (!data.pincode.trim() || data.pincode.length !== 6) {
-    alert('Please enter a valid 6-digit PIN code');
+    message.error({content: 'Please enter a valid 6-digit PIN code',key: 'validation-error'});
     return false;
   }
   
   // Validate PIN code matches state
   const pincodeValidation = validatePincodeForState(data.pincode, data.state);
   if (!pincodeValidation.isValid) {
-    alert(pincodeValidation.message);
+    message.error({content: pincodeValidation.message,key: 'validation-error'});
     return false;
   }
   
   // Validate billing address if different
   if (data.billing_address_different) {
     if (!data.billing_address.trim()) {
-      alert('Please enter billing address');
+    
+      message.error({content: 'Please enter billing address',key: 'validation-error'});
       return false;
     }
     if (!data.billing_city.trim()) {
-      alert('Please enter billing city');
+      message.error({content: 'Please enter billing city',key: 'validation-error'});
       return false;
     }
     if (!data.billing_state) {
-      alert('Please select billing state');
+      message.error({content: 'Please select billing state',key: 'validation-error'});
       return false;
     }
     if (!data.billing_pincode.trim() || data.billing_pincode.length !== 6) {
-      alert('Please enter a valid 6-digit billing PIN code');
+      message.error({content: 'Please enter a valid 6-digit billing PIN code',key: 'validation-error'});
       return false;
     }
     
     // Validate billing PIN code matches billing state
     const billingPincodeValidation = validatePincodeForState(data.billing_pincode, data.billing_state);
     if (!billingPincodeValidation.isValid) {
-      alert(billingPincodeValidation.message);
+      message.error({content: billingPincodeValidation.message,key: 'validation-error'});
       return false;
     }
   }

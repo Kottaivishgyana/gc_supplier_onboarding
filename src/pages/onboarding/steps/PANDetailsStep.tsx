@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CreditCard, Upload, X, FileText, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,13 +27,14 @@ export function PANDetailsStep() {
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
     // Validate only PAN number before verification
+    message.destroy();
     if (!panDetails.pan_number.trim()) {
-      alert('Please enter PAN number');
+      message.error({ content: 'Please enter PAN number', key: 'validation-error' });
       return;
     }
 
     if (!panRegex.test(panDetails.pan_number)) {
-      alert('Please enter a valid PAN number (e.g., ABCDE1234F)');
+      message.error({ content: 'Please enter a valid PAN number (e.g., ABCDE1234F)', key: 'validation-error' });
       return;
     }
 
@@ -256,32 +258,35 @@ export function validatePANDetails(data: {
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
   const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
   
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   if (!data.pan_number.trim()) {
-    alert('Please enter PAN number');
+    message.error({ content: 'Please enter PAN number', key: 'validation-error' });
     return false;
   }
   if (!panRegex.test(data.pan_number)) {
-    alert('Please enter a valid PAN number (e.g., ABCDE1234F)');
+    message.error({ content: 'Please enter a valid PAN number (e.g., ABCDE1234F)', key: 'validation-error' });
     return false;
   }
   if (!data.full_name.trim()) {
-    alert('Please enter full name (as per PAN)');
+    message.error({ content: 'Please enter full name (as per PAN)', key: 'validation-error' });
     return false;
   }
   if (!data.dob) {
-    alert('Please select date of birth');
+    message.error({ content: 'Please select date of birth', key: 'validation-error' });
     return false;
   }
   if (!dobRegex.test(data.dob)) {
-    alert('Please enter date of birth in YYYY-MM-DD format (e.g., 2003-03-13)');
+    message.error({ content: 'Please enter date of birth in YYYY-MM-DD format (e.g., 2003-03-13)', key: 'validation-error' });
     return false;
   }
   if (!data.pan_document) {
-    alert('Please upload PAN document');
+    message.error({ content: 'Please upload PAN document', key: 'validation-error' });
     return false;
   }
   if (data.pan_document.size > 5 * 1024 * 1024) {
-    alert('PAN document size should be less than 5MB');
+    message.error({ content: 'PAN document size should be less than 5MB', key: 'validation-error' });
     return false;
   }
   return true;

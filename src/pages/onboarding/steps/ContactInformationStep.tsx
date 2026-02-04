@@ -1,4 +1,5 @@
 import { User, Phone, Mail, Plus, X } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -506,53 +507,56 @@ export function validateContactInformation(data: {
   additional_contact_email?: string;
   additional_contact_role?: string;
 }): boolean {
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   // Validate first contact (Transaction - Mandatory)
   if (!data.transaction_name.trim()) {
-    alert('Please enter transaction contact name');
+    message.error({ content: 'Please enter transaction contact name', key: 'validation-error' });
     return false;
   }
   if (!data.transaction_contact.trim() || data.transaction_contact.length !== 10) {
-    alert('Please enter a valid 10-digit transaction contact number');
+    message.error({ content: 'Please enter a valid 10-digit transaction contact number', key: 'validation-error' });
     return false;
   }
   if (!data.transaction_email.trim() || !data.transaction_email.includes('@')) {
-    alert('Please enter a valid transaction email address');
+    message.error({ content: 'Please enter a valid transaction email address', key: 'validation-error' });
     return false;
   }
 
   // Validate second contact (Additional Communication 1 - Mandatory)
   if (!data.escalation_name.trim()) {
-    alert('Please enter first additional communication contact name');
+    message.error({ content: 'Please enter first additional communication contact name', key: 'validation-error' });
     return false;
   }
   if (!data.escalation_role || !['hod', 'proprietor', 'head'].includes(data.escalation_role)) {
-    alert('Please select HOD, Proprietor, or Head for first additional communication contact');
+    message.error({ content: 'Please select HOD, Proprietor, or Head for first additional communication contact', key: 'validation-error' });
     return false;
   }
   if (!data.escalation_contact.trim() || data.escalation_contact.length !== 10) {
-    alert('Please enter a valid 10-digit first additional communication contact number');
+    message.error({ content: 'Please enter a valid 10-digit first additional communication contact number', key: 'validation-error' });
     return false;
   }
   if (!data.escalation_email.trim() || !data.escalation_email.includes('@')) {
-    alert('Please enter a valid first additional communication email address');
+    message.error({ content: 'Please enter a valid first additional communication email address', key: 'validation-error' });
     return false;
   }
 
   // Validate third contact (Additional Communication 2 - Mandatory)
   if (!data.additional_contact2_name.trim()) {
-    alert('Please enter second additional communication contact name');
+    message.error({ content: 'Please enter second additional communication contact name', key: 'validation-error' });
     return false;
   }
   if (!data.additional_contact2_role || !['hod', 'proprietor', 'head'].includes(data.additional_contact2_role)) {
-    alert('Please select HOD, Proprietor, or Head for second additional communication contact');
+    message.error({ content: 'Please select HOD, Proprietor, or Head for second additional communication contact', key: 'validation-error' });
     return false;
   }
   if (!data.additional_contact2.trim() || data.additional_contact2.length !== 10) {
-    alert('Please enter a valid 10-digit second additional communication contact number');
+    message.error({ content: 'Please enter a valid 10-digit second additional communication contact number', key: 'validation-error' });
     return false;
   }
   if (!data.additional_contact2_email.trim() || !data.additional_contact2_email.includes('@')) {
-    alert('Please enter a valid second additional communication email address');
+    message.error({ content: 'Please enter a valid second additional communication email address', key: 'validation-error' });
     return false;
   }
 
@@ -565,15 +569,15 @@ export function validateContactInformation(data: {
 
   if (hasThirdContact) {
     if (!data.additional_contact_name?.trim()) {
-      alert('Please enter name for third additional communication contact or remove all fields');
+      message.error({ content: 'Please enter name for third additional communication contact or remove all fields', key: 'validation-error' });
       return false;
     }
     if (!data.additional_contact?.trim() || data.additional_contact.length !== 10) {
-      alert('Please enter a valid 10-digit contact number for third additional communication contact');
+      message.error({ content: 'Please enter a valid 10-digit contact number for third additional communication contact', key: 'validation-error' });
       return false;
     }
     if (!data.additional_contact_email?.trim() || !data.additional_contact_email.includes('@')) {
-      alert('Please enter a valid email address for third additional communication contact');
+      message.error({ content: 'Please enter a valid email address for third additional communication contact', key: 'validation-error' });
       return false;
     }
   }

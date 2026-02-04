@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FileText, Upload, X, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +30,9 @@ export function GSTInfoStep() {
   };
 
   const handleVerify = async () => {
+    message.destroy();
     if (gstInfo.gst_status !== 'registered') {
-      alert('Please select GST status as Registered');
+      message.error({ content: 'Please select GST status as Registered', key: 'validation-error' });
       return;
     }
 
@@ -38,17 +40,17 @@ export function GSTInfoStep() {
 
     // Validate GST number before verification
     if (!gstInfo.gst_number.trim()) {
-      alert('Please enter GSTIN');
+      message.error({ content: 'Please enter GSTIN', key: 'validation-error' });
       return;
     }
 
     if (gstInfo.gst_number.length !== 15) {
-      alert('GSTIN must be 15 characters');
+      message.error({ content: 'GSTIN must be 15 characters', key: 'validation-error' });
       return;
     }
 
     if (!gstRegex.test(gstInfo.gst_number)) {
-      alert('Please enter a valid GSTIN');
+      message.error({ content: 'Please enter a valid GSTIN', key: 'validation-error' });
       return;
     }
 
@@ -312,25 +314,28 @@ export function validateGSTInfo(data: {
   gst_number: string;
   gst_document?: File | null;
 }): boolean {
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   if (!data.gst_status) {
-    alert('Please select GST registration status');
+    message.error({ content: 'Please select GST registration status', key: 'validation-error' });
     return false;
   }
   if (data.gst_status === 'registered') {
     if (!data.gst_number.trim()) {
-      alert('Please enter GSTIN');
+      message.error({ content: 'Please enter GSTIN', key: 'validation-error' });
       return false;
     }
     if (data.gst_number.length !== 15) {
-      alert('GSTIN must be 15 characters');
+      message.error({ content: 'GSTIN must be 15 characters', key: 'validation-error' });
       return false;
     }
     if (!data.gst_document) {
-      alert('Please upload GST certificate');
+      message.error({ content: 'Please upload GST certificate', key: 'validation-error' });
       return false;
     }
     if (data.gst_document.size > 5 * 1024 * 1024) {
-      alert('GST document size should be less than 5MB');
+      message.error({ content: 'GST document size should be less than 5MB', key: 'validation-error' });
       return false;
     }
   }

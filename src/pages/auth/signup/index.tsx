@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Mail, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Mail, Eye, EyeOff, Loader2, AlertCircle, Lock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -261,127 +261,147 @@ export function SignupPage({ onSignupComplete }: SignupPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Create Your Account</CardTitle>
-          <CardDescription className="text-center">
-            Set up your password to complete the signup process
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email (Read-only) */}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">
-                Email Address <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  value={supplierData.email_id}
-                  readOnly
-                  className="pr-12 h-14 bg-muted cursor-not-allowed"
-                />
-                <Mail className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                This email is pre-filled and cannot be changed
-              </p>
-            </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md">
+       
 
-            {/* New Password */}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">
-                New Password <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pr-12 h-14"
-                  required
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Password must be at least 8 characters long
-              </p>
-            </div>
+        {/* Card */}
+        <Card className="bg-white shadow-lg rounded-lg">
+          <CardContent className="pt-2 pb-8 px-8">
+             {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <img 
+            src="/Geri Care.png" 
+            alt="Geri Care" 
+            className="h-12 object-contain"
+          />
+        </div>
+            {/* Title */}
+            <h1 className="text-3xl font-bold text-center text-slate-800 mb-2">
+              Create Your Account
+            </h1>
+            <p className="text-sm text-gray-500 text-center mb-8">
+              Vendor Onboarding Portal
+            </p>
 
-            {/* Confirm Password */}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="confirmPassword">
-                Confirm Password <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pr-12 h-14"
-                  required
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email (Read-only) */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email" className="text-gray-700 text-sm font-medium">
+                  Email Address
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={supplierData.email_id}
+                    readOnly
+                    placeholder="Enter your email address"
+                    className="pl-12 pr-4 h-14 border-blue-200 bg-white cursor-not-allowed rounded-lg"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+              {/* New Password */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="password" className="text-gray-700 text-sm font-medium">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-12 pr-12 h-14 border-gray-300 rounded-lg"
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
               </div>
-            )}
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full h-14"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                'Create Account'
+              {/* Confirm Password */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="confirmPassword" className="text-gray-700 text-sm font-medium">
+                  Confirm Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-12 pr-12 h-14 border-gray-300 rounded-lg"
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
               )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                className="w-full h-14 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-md"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </form>
+
+           
+            
+          </CardContent>
+        </Card>
+
+        {/* Copyright */}
+        <p className="text-center text-gray-400 text-sm mt-8">
+          © {new Date().getFullYear()} Geri Care. All rights reserved.
+        </p>
+      </div>
     </div>
   );
 }

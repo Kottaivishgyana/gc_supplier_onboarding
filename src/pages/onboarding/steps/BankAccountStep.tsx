@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { User, Building2, Hash, MapPin, Landmark, CheckCircle2, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,13 +25,14 @@ export function BankAccountStep() {
 
   const handleVerify = async () => {
     // Validate fields before verification
+    message.destroy();
     if (!bankAccount.account_number.trim()) {
-      alert('Please enter account number');
+      message.error({ content: 'Please enter account number', key: 'validation-error' });
       return;
     }
 
     if (!bankAccount.ifsc_code.trim() || bankAccount.ifsc_code.length !== 11) {
-      alert('Please enter a valid 11-character IFSC code');
+      message.error({ content: 'Please enter a valid 11-character IFSC code', key: 'validation-error' });
       return;
     }
 
@@ -276,28 +278,31 @@ export function validateBankAccount(data: {
   bank_name: string;
   branch_name: string;
 }): boolean {
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   if (!data.account_name.trim()) {
-    alert('Please enter account holder name');
+    message.error({ content: 'Please enter account holder name', key: 'validation-error' });
     return false;
   }
   if (!data.account_number.trim()) {
-    alert('Please enter account number');
+    message.error({ content: 'Please enter account number', key: 'validation-error' });
     return false;
   }
   if (data.account_number !== data.confirm_account_number) {
-    alert('Account numbers do not match');
+    message.error({ content: 'Account numbers do not match', key: 'validation-error' });
     return false;
   }
   if (!data.ifsc_code.trim() || data.ifsc_code.length !== 11) {
-    alert('Please enter a valid 11-character IFSC code');
+    message.error({ content: 'Please enter a valid 11-character IFSC code', key: 'validation-error' });
     return false;
   }
   if (!data.bank_name.trim()) {
-    alert('Please enter bank name');
+    message.error({ content: 'Please enter bank name', key: 'validation-error' });
     return false;
   }
   if (!data.branch_name.trim()) {
-    alert('Please enter branch name');
+    message.error({ content: 'Please enter branch name', key: 'validation-error' });
     return false;
   }
   return true;

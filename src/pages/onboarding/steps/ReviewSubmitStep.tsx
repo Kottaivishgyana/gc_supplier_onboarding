@@ -1,4 +1,5 @@
 import { Badge, CreditCard, FileText, Building2, Store, Pencil, User, Pill, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -465,8 +466,11 @@ export function ReviewSubmitStep() {
 }
 
 export function validateReviewSubmit(termsAccepted: boolean): boolean {
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   if (!termsAccepted) {
-    alert('Please accept the terms and conditions to proceed');
+    message.error({ content: 'Please accept the terms and conditions to proceed', key: 'validation-error' });
     return false;
   }
   return true;

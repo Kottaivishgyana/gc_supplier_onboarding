@@ -1,4 +1,5 @@
 import { FileText, Upload, X } from 'lucide-react';
+import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -158,14 +159,17 @@ export function validateDrugLicense(data: {
     return true;
   }
 
+  // Destroy previous messages to show only one error at a time
+  message.destroy();
+  
   if (data.drug_license_status === 'yes') {
     if (!data.drug_license_number.trim()) {
-      alert('Please enter Drug License Number');
+      message.error({ content: 'Please enter Drug License Number', key: 'validation-error' });
       return false;
     }
 
     if (data.drug_license_document && data.drug_license_document.size > 5 * 1024 * 1024) {
-      alert('Drug license document size should be less than 5MB');
+      message.error({ content: 'Drug license document size should be less than 5MB', key: 'validation-error' });
       return false;
     }
   } else {
