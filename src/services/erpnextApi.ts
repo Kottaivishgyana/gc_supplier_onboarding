@@ -110,6 +110,7 @@ interface AddressPayload {
   state: string;
   country: string;
   pincode: string;
+  email_id: string;
   is_primary_address: number;
   is_shipping_address: number;
   links: {
@@ -525,6 +526,7 @@ export async function createAddress(
     city: string;
     state: string;
     pincode: string;
+    email_id: string;
   },
   addressType: 'Billing' | 'Shipping' = 'Billing',
   isPrimary: boolean = true
@@ -538,6 +540,7 @@ export async function createAddress(
     state: addressData.state,
     country: 'India',
     pincode: addressData.pincode,
+    email_id: addressData.email_id,
     is_primary_address: isPrimary ? 1 : 0,
     is_shipping_address: addressType === 'Shipping' ? 1 : 0,
     links: [
@@ -997,6 +1000,7 @@ export async function submitOnboardingData(
         city: formData.basicInfo.city,
         state: formData.basicInfo.state,
         pincode: formData.basicInfo.pincode,
+        email_id: formData.basicInfo.email,
       },
       'Billing',
       true
@@ -1011,6 +1015,7 @@ export async function submitOnboardingData(
           city: formData.basicInfo.billing_city,
           state: formData.basicInfo.billing_state,
           pincode: formData.basicInfo.billing_pincode,
+          email_id: formData.basicInfo.email,
         },
         'Billing',
         false
