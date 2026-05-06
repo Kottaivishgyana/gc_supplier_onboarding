@@ -993,6 +993,11 @@ export async function submitOnboardingData(
     }
 
     // 3. Create registered address (always created as primary)
+    const addressEmail = formData.basicInfo.email;
+    console.log('[createAddress] email used for address:', addressEmail);
+    if (!addressEmail) {
+      throw new Error('Email is required to create address. Please ensure email is filled in Basic Info.');
+    }
     await createAddress(
       supplierName,
       {
@@ -1000,7 +1005,7 @@ export async function submitOnboardingData(
         city: formData.basicInfo.city,
         state: formData.basicInfo.state,
         pincode: formData.basicInfo.pincode,
-        email_id: formData.basicInfo.email,
+        email_id: addressEmail,
       },
       'Billing',
       true
@@ -1015,7 +1020,7 @@ export async function submitOnboardingData(
           city: formData.basicInfo.billing_city,
           state: formData.basicInfo.billing_state,
           pincode: formData.basicInfo.billing_pincode,
-          email_id: formData.basicInfo.email,
+          email_id: addressEmail,
         },
         'Billing',
         false
