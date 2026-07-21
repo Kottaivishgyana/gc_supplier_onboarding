@@ -9,10 +9,11 @@ import type {
   DrugLicenseData,
   ContactInformationData,
   CommercialDetailsData,
+  SelfDeclarationData,
   SupplierApiData,
 } from '@/types/onboarding';
 import { INITIAL_FORM_DATA } from '@/types/onboarding';
-import { getSupplier, submitOnboardingData } from '@/services/erpnextApi';
+import { getSupplier, getSupplierAddresses, submitOnboardingData } from '@/services/erpnextApi';
 
 // LocalStorage key for caching
 const STORAGE_KEY = 'vendor-onboarding-cache';
@@ -41,12 +42,13 @@ function base64ToFile(base64: string, fileName: string, mimeType: string): File 
 }
 
 // Helper to serialize form data (converting File objects to base64)
-async function serializeFormData(formData: OnboardingFormData): Promise<Partial<OnboardingFormData> & { 
+async function serializeFormData(formData: OnboardingFormData): Promise<Partial<OnboardingFormData> & {
   _fileData?: {
     pan_document?: { base64: string; name: string; type: string };
     gst_document?: { base64: string; name: string; type: string };
     drug_license_document?: { base64: string; name: string; type: string };
     msme_document?: { base64: string; name: string; type: string };
+    self_declaration_document?: { base64: string; name: string; type: string };
     authorized_distributors?: Array<{ manufacturer_name: string; document?: { base64: string; name: string; type: string } }>;
   };
 }> {
@@ -55,6 +57,7 @@ async function serializeFormData(formData: OnboardingFormData): Promise<Partial<
     gst_document?: { base64: string; name: string; type: string };
     drug_license_document?: { base64: string; name: string; type: string };
     msme_document?: { base64: string; name: string; type: string };
+    self_declaration_document?: { base64: string; name: string; type: string };
     authorized_distributors?: Array<{ manufacturer_name: string; document?: { base64: string; name: string; type: string } }>;
   } = {};
 
@@ -106,6 +109,18 @@ async function serializeFormData(formData: OnboardingFormData): Promise<Partial<
     }
   }
 
+  if (formData.selfDeclaration.self_declaration_document) {
+    try {
+      fileData.self_declaration_document = {
+        base64: await fileToBase64(formData.selfDeclaration.self_declaration_document),
+        name: formData.selfDeclaration.self_declaration_document.name,
+        type: formData.selfDeclaration.self_declaration_document.type,
+      };
+    } catch (error) {
+      console.warn('Failed to serialize self declaration document:', error);
+    }
+  }
+
   if (formData.commercialDetails.authorized_distributors) {
     fileData.authorized_distributors = await Promise.all(
       formData.commercialDetails.authorized_distributors.map(async (item) => {
@@ -153,6 +168,10 @@ async function serializeFormData(formData: OnboardingFormData): Promise<Partial<
         manufacturer_name: item.manufacturer_name,
         document: null, // File removed, stored in _fileData
       })),
+    },
+    selfDeclaration: {
+      ...formData.selfDeclaration,
+      self_declaration_document: null, // File removed, stored in _fileData
     },
     _fileData: fileData,
   };
@@ -263,6 +282,15 @@ function loadFromCache(supplierId: string | null): Partial<OnboardingFormData> |
           );
         }
         
+        if (fileData.self_declaration_document) {
+          parsed.selfDeclaration = parsed.selfDeclaration || {};
+          parsed.selfDeclaration.self_declaration_document = base64ToFile(
+            fileData.self_declaration_document.base64,
+            fileData.self_declaration_document.name,
+            fileData.self_declaration_document.type
+          );
+        }
+
         if (fileData.authorized_distributors) {
           parsed.commercialDetails = parsed.commercialDetails || {};
           parsed.commercialDetails.authorized_distributors = fileData.authorized_distributors.map((item: { manufacturer_name: string; document?: { base64: string; name: string; type: string } }) => ({
@@ -363,6 +391,7 @@ interface OnboardingStore {
   updateDrugLicense: (data: Partial<DrugLicenseData>) => void;
   updateContactInformation: (data: Partial<ContactInformationData>) => void;
   updateCommercialDetails: (data: Partial<CommercialDetailsData>) => void;
+  updateSelfDeclaration: (data: Partial<SelfDeclarationData>) => void;
   setTermsAccepted: (accepted: boolean) => void;
   setPANVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
   setGSTVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
@@ -392,7 +421,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
 
   nextStep: () => {
     const state = get();
-    set({ currentStep: Math.min(state.currentStep + 1, 9) });
+    set({ currentStep: Math.min(state.currentStep + 1, 10) });
     // Save to cache after navigation
     saveToCache(state.supplierId, state.formData);
   },
@@ -406,7 +435,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
 
   goToStep: (step: number) => {
     const state = get();
-    set({ currentStep: Math.min(Math.max(step, 1), 9) });
+    set({ currentStep: Math.min(Math.max(step, 1), 10) });
     // Save to cache after navigation
     saveToCache(state.supplierId, state.formData);
   },
@@ -491,6 +520,16 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     saveToCache(state.supplierId, newFormData);
   },
 
+  updateSelfDeclaration: (data) => {
+    const state = get();
+    const newFormData = {
+      ...state.formData,
+      selfDeclaration: { ...state.formData.selfDeclaration, ...data },
+    };
+    set({ formData: newFormData });
+    saveToCache(state.supplierId, newFormData);
+  },
+
   setTermsAccepted: (accepted) => {
     const state = get();
     const newFormData = { ...state.formData, termsAccepted: accepted };
@@ -517,74 +556,214 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
       return;
     }
 
+    // Skip if already initialized with same supplier (avoid double fetch)
+    const currentState = get();
+    if (currentState.supplierData && currentState.supplierId === supplierId && !currentState.isLoading) {
+      console.log('[initializeFromUrl] Already initialized for supplier:', supplierId);
+      return;
+    }
+
     set({ isLoading: true, error: null, supplierId });
 
     try {
-      const supplierData = await getSupplier(supplierId);
-      
+      // Fetch supplier data and addresses in parallel
+      const [supplierData, addresses] = await Promise.all([
+        getSupplier(supplierId),
+        getSupplierAddresses(supplierId),
+      ]);
+
+      // Extract primary and billing addresses
+      const primaryAddress = addresses.find(a => a.is_primary_address === 1) || addresses[0];
+      const billingAddress = addresses.find(a => a.address_type === 'Billing' && a.is_primary_address !== 1);
+
+      console.log('[initializeFromUrl] Addresses from ERPNext:', addresses);
+
+      // Debug: log full supplier data from ERPNext
+      console.log('[initializeFromUrl] Full supplier data from ERPNext:', JSON.stringify(supplierData, null, 2));
+      console.log('[initializeFromUrl] Key custom fields:', {
+        custom_business_type: supplierData.custom_business_type,
+        custom_transaction_contact_name: supplierData.custom_transaction_contact_name,
+        custom_drug_license_no: supplierData.custom_drug_license_no,
+        custom_msme__udyam_number: supplierData.custom_msme__udyam_number,
+        custom_discount_: supplierData.custom_discount_,
+        custom_pan_img: supplierData.custom_pan_img,
+        custom_gst_img: supplierData.custom_gst_img,
+        custom_bank_account_details: supplierData.custom_bank_account_details,
+        custom_invoice_discount_type: supplierData.custom_invoice_discount_type,
+        custom_invoice_discount_: supplierData.custom_invoice_discount_,
+        custom_manufacturers_authorized_distributor: supplierData.custom_manufacturers_authorized_distributor,
+        custom_return_policy__damage: supplierData.custom_return_policy__damage,
+      });
+
       // Pre-fill form with existing supplier data
-      const gstStatus: 'registered' | 'not_registered' | '' = 
-        supplierData.gst_category === 'Registered Regular' || 
-        supplierData.gst_category === 'Registered Composition' 
-          ? 'registered' 
-          : supplierData.gst_category === 'Unregistered' 
-            ? 'not_registered' 
+      const gstStatus: 'registered' | 'not_registered' | '' =
+        supplierData.gst_category === 'Registered Regular' ||
+        supplierData.gst_category === 'Registered Composition'
+          ? 'registered'
+          : supplierData.gst_category === 'Unregistered'
+            ? 'not_registered'
             : '';
 
       // Load cached data if available
       const cachedData = loadFromCache(supplierId);
-      
-      // Merge: API data (base) + Cached data (user inputs) + Default values
+
+      // Extract bank account from child table (first entry)
+      const bankEntry = supplierData.custom_bank_account_details?.[0];
+
+      // Extract MSME verification data from supplier
+      const msmeVerificationData = supplierData.custom_name_of_enterprise ? {
+        name_of_enterprise: supplierData.custom_name_of_enterprise || '',
+        major_activity: supplierData.custom_major_activity || '',
+        date_of_commencement: supplierData.custom_date_of_commencement || '',
+        organization_type: supplierData.custom_organization_of_type || '',
+        address: supplierData.custom_address || '',
+        enterprise_type_list: (supplierData.custom_enterprise_type_list || []).map(item => ({
+          classification_year: item.name_of_enterprise || '',
+          enterprise_type: item.major_activity || '',
+          classification_date: item.date_of_commencement || '',
+        })),
+      } : undefined;
+
+      // Determine MSME status from ERPNext data
+      const msmeStatus = supplierData.custom_msme_registered === 'Yes' || supplierData.custom_msme__udyam_number
+        ? 'yes' as const
+        : supplierData.custom_msme_registered === 'No'
+          ? 'no' as const
+          : '' as const;
+
+      // Determine drug license status
+      const drugLicenseStatus = supplierData.custom_drug_license_no
+        ? 'yes' as const
+        : '' as const;
+
+      // Map escalation/contact roles
+      const mapRole = (role?: string): 'hod' | 'proprietor' | 'head' | '' => {
+        if (!role) return '';
+        const lower = role.toLowerCase();
+        if (lower === 'hod') return 'hod';
+        if (lower === 'proprietor') return 'proprietor';
+        if (lower === 'head') return 'head';
+        return '';
+      };
+
+      // Merge: ERPNext data (base) → Cache (user edits) takes priority
       const mergedFormData: OnboardingFormData = {
         ...INITIAL_FORM_DATA,
-        ...(cachedData || {}),
         basicInfo: {
           ...INITIAL_FORM_DATA.basicInfo,
-          company_name: supplierData.supplier_name || cachedData?.basicInfo?.company_name || '',
-          email: supplierData.email_id || cachedData?.basicInfo?.email || '',
-          phone: supplierData.mobile_no || cachedData?.basicInfo?.phone || '',
-          ...(cachedData?.basicInfo || {}),
+          company_name: cachedData?.basicInfo?.company_name || supplierData.supplier_name || '',
+          email: cachedData?.basicInfo?.email || supplierData.email_id || '',
+          phone: cachedData?.basicInfo?.phone || supplierData.mobile_no || '',
+          business_type: cachedData?.basicInfo?.business_type || supplierData.custom_business_type || '',
+          address: cachedData?.basicInfo?.address || primaryAddress?.address_line1 || '',
+          city: cachedData?.basicInfo?.city || primaryAddress?.city || '',
+          state: cachedData?.basicInfo?.state || primaryAddress?.state || '',
+          pincode: cachedData?.basicInfo?.pincode || primaryAddress?.pincode || '',
+          billing_address_different: cachedData?.basicInfo?.billing_address_different || !!billingAddress,
+          billing_address: cachedData?.basicInfo?.billing_address || billingAddress?.address_line1 || '',
+          billing_city: cachedData?.basicInfo?.billing_city || billingAddress?.city || '',
+          billing_state: cachedData?.basicInfo?.billing_state || billingAddress?.state || '',
+          billing_pincode: cachedData?.basicInfo?.billing_pincode || billingAddress?.pincode || '',
         },
         panDetails: {
           ...INITIAL_FORM_DATA.panDetails,
-          pan_number: supplierData.pan || cachedData?.panDetails?.pan_number || '',
-          ...(cachedData?.panDetails || {}),
+          pan_number: cachedData?.panDetails?.pan_number || supplierData.pan || '',
+          full_name: cachedData?.panDetails?.full_name || '',
+          dob: cachedData?.panDetails?.dob || '',
+          pan_document: cachedData?.panDetails?.pan_document || null,
         },
         gstInfo: {
           ...INITIAL_FORM_DATA.gstInfo,
-          gst_status: gstStatus || cachedData?.gstInfo?.gst_status || '',
-          gst_number: supplierData.gstin || cachedData?.gstInfo?.gst_number || '',
-          ...(cachedData?.gstInfo || {}),
+          gst_status: cachedData?.gstInfo?.gst_status || gstStatus || '',
+          gst_number: cachedData?.gstInfo?.gst_number || supplierData.gstin || '',
+          gst_document: cachedData?.gstInfo?.gst_document || null,
         },
         bankAccount: {
           ...INITIAL_FORM_DATA.bankAccount,
+          ...(bankEntry && !cachedData?.bankAccount?.account_number ? {
+            account_name: bankEntry.account_holder_name || '',
+            account_number: bankEntry.account_number || '',
+            confirm_account_number: bankEntry.account_number || '',
+            ifsc_code: bankEntry.ifsc_code || '',
+            bank_name: bankEntry.bank_name || '',
+            branch_name: bankEntry.branch_name || '',
+            micr: bankEntry.micr || '',
+          } : {}),
           ...(cachedData?.bankAccount || {}),
         },
         msmeStatus: {
           ...INITIAL_FORM_DATA.msmeStatus,
-          ...(cachedData?.msmeStatus || {}),
+          msme_status: cachedData?.msmeStatus?.msme_status || msmeStatus,
+          msme_number: cachedData?.msmeStatus?.msme_number || supplierData.custom_msme__udyam_number || '',
+          verification_data: cachedData?.msmeStatus?.verification_data || msmeVerificationData,
+          msme_document: cachedData?.msmeStatus?.msme_document || null,
         },
         drugLicense: {
           ...INITIAL_FORM_DATA.drugLicense,
-          ...(cachedData?.drugLicense || {}),
+          drug_license_status: cachedData?.drugLicense?.drug_license_status || drugLicenseStatus,
+          drug_license_number: cachedData?.drugLicense?.drug_license_number || supplierData.custom_drug_license_no || '',
+          drug_license_document: cachedData?.drugLicense?.drug_license_document || null,
         },
         contactInformation: {
           ...INITIAL_FORM_DATA.contactInformation,
-          ...(cachedData?.contactInformation || {}),
+          transaction_name: cachedData?.contactInformation?.transaction_name || supplierData.custom_transaction_contact_name || '',
+          transaction_contact: cachedData?.contactInformation?.transaction_contact || supplierData.custom_transaction_contact || '',
+          transaction_email: cachedData?.contactInformation?.transaction_email || supplierData.custom_transaction_email || '',
+          escalation_name: cachedData?.contactInformation?.escalation_name || supplierData.custom_escalation_contact_name || '',
+          escalation_role: cachedData?.contactInformation?.escalation_role || mapRole(supplierData.custom_escalation_role),
+          escalation_contact: cachedData?.contactInformation?.escalation_contact || supplierData.custom_escalation_contact || '',
+          escalation_email: cachedData?.contactInformation?.escalation_email || supplierData.custom_escalation_email || '',
+          additional_contact2_name: cachedData?.contactInformation?.additional_contact2_name || supplierData.custom_contact_name_2 || '',
+          additional_contact2_role: cachedData?.contactInformation?.additional_contact2_role || mapRole(supplierData.custom_role_2),
+          additional_contact2: cachedData?.contactInformation?.additional_contact2 || supplierData.custom_contact_2 || '',
+          additional_contact2_email: cachedData?.contactInformation?.additional_contact2_email || supplierData.custom_email_2 || '',
+          additional_contact_name: cachedData?.contactInformation?.additional_contact_name || supplierData.custom_contact_name_3 || '',
+          additional_contact_role: cachedData?.contactInformation?.additional_contact_role || mapRole(supplierData.custom_role_3),
+          additional_contact: cachedData?.contactInformation?.additional_contact || supplierData.custom_contact_3 || '',
+          additional_contact_email: cachedData?.contactInformation?.additional_contact_email || supplierData.custom_email_3 || '',
         },
         commercialDetails: {
           ...INITIAL_FORM_DATA.commercialDetails,
-          ...(cachedData?.commercialDetails || {}),
+          credit_days: cachedData?.commercialDetails?.credit_days || supplierData.custom_credit_days_from_delivery_date || '45',
+          delivery: cachedData?.commercialDetails?.delivery || supplierData.custom_delivery || 'At our works at your cost',
+          discount_basis: cachedData?.commercialDetails?.discount_basis || (supplierData.custom_discount_ as 'PTS' | 'PTR' | 'MRP' | '') || '',
+          invoice_discount_type: cachedData?.commercialDetails?.invoice_discount_type || (supplierData.custom_invoice_discount_type as 'On Invoice' | 'Off Invoice' | '') || '',
+          invoice_discount_percentage: cachedData?.commercialDetails?.invoice_discount_percentage || (supplierData.custom_invoice_discount_ != null ? String(supplierData.custom_invoice_discount_) : ''),
+          is_authorized_distributor: cachedData?.commercialDetails?.is_authorized_distributor || (supplierData.custom_manufacturers_authorized_distributor as 'Yes' | 'No' | '') || '',
+          authorized_distributors: cachedData?.commercialDetails?.authorized_distributors || (supplierData.custom_authorized_distributors || []).map(d => ({
+            manufacturer_name: d.manufacturer_name || '',
+            document: null,
+          })),
+          return_non_moving: cachedData?.commercialDetails?.return_non_moving || supplierData.custom_return_policy__non_moving || '100',
+          return_short_expiry_percentage: cachedData?.commercialDetails?.return_short_expiry_percentage || (supplierData.custom_return_policy__short_expiry_less_than_90_days_ != null ? String(supplierData.custom_return_policy__short_expiry_less_than_90_days_) : ''),
+          return_damage_type: cachedData?.commercialDetails?.return_damage_type || (supplierData.custom_return_policy__damage as 'Replacement' | '100% CN' | '') || '',
+          return_expired_percentage: cachedData?.commercialDetails?.return_expired_percentage || (supplierData.custom_return_policy__expired_ != null ? String(supplierData.custom_return_policy__expired_) : ''),
+        },
+        selfDeclaration: {
+          ...INITIAL_FORM_DATA.selfDeclaration,
+          self_declaration_document: cachedData?.selfDeclaration?.self_declaration_document || null,
         },
         termsAccepted: cachedData?.termsAccepted || false,
       };
+
+      // Debug: log merged form data
+      console.log('[initializeFromUrl] Merged form data:', {
+        basicInfo: mergedFormData.basicInfo,
+        contactInformation: mergedFormData.contactInformation,
+        panDetails: { pan_number: mergedFormData.panDetails.pan_number, full_name: mergedFormData.panDetails.full_name },
+        gstInfo: { gst_status: mergedFormData.gstInfo.gst_status, gst_number: mergedFormData.gstInfo.gst_number },
+        bankAccount: mergedFormData.bankAccount,
+        msmeStatus: { msme_status: mergedFormData.msmeStatus.msme_status, msme_number: mergedFormData.msmeStatus.msme_number },
+        drugLicense: { drug_license_status: mergedFormData.drugLicense.drug_license_status, drug_license_number: mergedFormData.drugLicense.drug_license_number },
+        commercialDetails: mergedFormData.commercialDetails,
+      });
 
       set({
         supplierData,
         formData: mergedFormData,
         isLoading: false,
       });
-      
+
       // Save merged data to cache
       saveToCache(supplierId, mergedFormData);
     } catch (error) {
@@ -614,6 +793,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         msmeStatus: formData.msmeStatus,
         contactInformation: formData.contactInformation,
         commercialDetails: formData.commercialDetails,
+        selfDeclaration: formData.selfDeclaration,
       });
 
       if (result.success) {

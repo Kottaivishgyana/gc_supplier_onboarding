@@ -10,8 +10,9 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyMSME } from '@/services/surepassApi';
 
 export function MSMEStatusStep() {
-  const { formData, updateMSMEStatus, setMSMEVerificationStatus } = useOnboardingStore();
+  const { formData, updateMSMEStatus, setMSMEVerificationStatus, supplierData } = useOnboardingStore();
   const { msmeStatus } = formData;
+  const existingMsmeUrl = supplierData?.custom_msme_certificate_;
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string>('');
@@ -259,6 +260,23 @@ export function MSMEStatusStep() {
                   <Label htmlFor="msme_document">
                     Upload MSME / Udyam Certificate
                   </Label>
+                  {/* Show existing attachment from ERPNext */}
+                  {existingMsmeUrl && !msmeStatus.msme_document && (
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        <span className="text-sm font-medium text-green-800 dark:text-green-400">Previously uploaded</span>
+                        <a
+                          href={`${import.meta.env.VITE_ERPNEXT_API_URL}${existingMsmeUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 underline hover:text-blue-800"
+                        >
+                          View file
+                        </a>
+                      </div>
+                    </div>
+                  )}
                   <Input
                     id="msme_document"
                     type="file"
@@ -270,7 +288,7 @@ export function MSMEStatusStep() {
                     className="h-14 cursor-pointer"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Upload PDF, JPG, or PNG file (Max 5MB)
+                    {existingMsmeUrl ? 'Upload a new file to replace the existing one, or leave as is' : 'Upload PDF, JPG, or PNG file (Max 5MB)'}
                   </p>
                 </div>
               </div>

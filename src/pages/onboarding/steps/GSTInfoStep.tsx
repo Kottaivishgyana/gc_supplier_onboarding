@@ -10,8 +10,9 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyGST } from '@/services/surepassApi';
 
 export function GSTInfoStep() {
-  const { formData, updateGSTInfo, setGSTVerificationStatus } = useOnboardingStore();
+  const { formData, updateGSTInfo, setGSTVerificationStatus, supplierData } = useOnboardingStore();
   const { gstInfo } = formData;
+  const existingGstUrl = supplierData?.custom_gst_img;
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string>('');
@@ -259,6 +260,23 @@ export function GSTInfoStep() {
                     Upload GST Certificate <span className="text-destructive">*</span>
                   </Label>
                   <div className="flex flex-col gap-3">
+                    {/* Show existing attachment from ERPNext */}
+                    {existingGstUrl && !gstInfo.gst_document && (
+                      <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-800 dark:text-green-400">Previously uploaded</span>
+                          <a
+                            href={`${import.meta.env.VITE_ERPNEXT_API_URL}${existingGstUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 underline hover:text-blue-800"
+                          >
+                            View file
+                          </a>
+                        </div>
+                      </div>
+                    )}
                     {gstInfo.gst_document ? (
                       <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
                         <div className="flex items-center gap-3">
@@ -296,7 +314,7 @@ export function GSTInfoStep() {
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Upload PDF, JPG, or PNG file (Max 5MB)
+                      {existingGstUrl ? 'Upload a new file to replace the existing one, or leave as is' : 'Upload PDF, JPG, or PNG file (Max 5MB)'}
                     </p>
                   </div>
                 </div>
@@ -313,10 +331,10 @@ export function validateGSTInfo(data: {
   gst_status: string;
   gst_number: string;
   gst_document?: File | null;
-}): boolean {
+}, existingGstUrl?: string): boolean {
   // Destroy previous messages to show only one error at a time
   message.destroy();
-  
+
   if (!data.gst_status) {
     message.error({ content: 'Please select GST registration status', key: 'validation-error' });
     return false;
@@ -330,11 +348,12 @@ export function validateGSTInfo(data: {
       message.error({ content: 'GSTIN must be 15 characters', key: 'validation-error' });
       return false;
     }
-    if (!data.gst_document) {
+    // Accept either new file or existing attachment
+    if (!data.gst_document && !existingGstUrl) {
       message.error({ content: 'Please upload GST certificate', key: 'validation-error' });
       return false;
     }
-    if (data.gst_document.size > 5 * 1024 * 1024) {
+    if (data.gst_document && data.gst_document.size > 5 * 1024 * 1024) {
       message.error({ content: 'GST document size should be less than 5MB', key: 'validation-error' });
       return false;
     }

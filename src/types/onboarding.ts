@@ -107,6 +107,10 @@ export interface CommercialDetailsData {
   return_expired_percentage: string;
 }
 
+export interface SelfDeclarationData {
+  self_declaration_document?: File | null;
+}
+
 export interface OnboardingFormData {
   basicInfo: BasicInfoData;
   panDetails: PANDetailsData;
@@ -116,10 +120,11 @@ export interface OnboardingFormData {
   drugLicense: DrugLicenseData;
   contactInformation: ContactInformationData;
   commercialDetails: CommercialDetailsData;
+  selfDeclaration: SelfDeclarationData;
   termsAccepted: boolean;
 }
 
-// Supplier data from ERPNext
+// Supplier data from ERPNext (full data including custom fields)
 export interface SupplierApiData {
   name: string;
   supplier_name: string;
@@ -129,6 +134,78 @@ export interface SupplierApiData {
   pan: string | null;
   gst_category: string | null;
   primary_address: string | null;
+  supplier_type: string | null;
+  country: string | null;
+  // Custom fields
+  custom_business_type?: string;
+  custom_drug_license_no?: string;
+  custom_verification_status?: string;
+  // Contact Information
+  custom_transaction_contact_name?: string;
+  custom_transaction_contact?: string;
+  custom_transaction_email?: string;
+  custom_escalation_contact_name?: string;
+  custom_escalation_role?: string;
+  custom_escalation_contact?: string;
+  custom_escalation_email?: string;
+  custom_contact_name_2?: string;
+  custom_role_2?: string;
+  custom_contact_2?: string;
+  custom_email_2?: string;
+  custom_contact_name_3?: string;
+  custom_role_3?: string;
+  custom_contact_3?: string;
+  custom_email_3?: string;
+  // Commercial Details
+  custom_credit_days_from_delivery_date?: string;
+  custom_delivery?: string;
+  custom_discount_?: string;
+  custom_invoice_discount_type?: string;
+  custom_invoice_discount_?: number;
+  custom_manufacturers_authorized_distributor?: string;
+  custom_return_policy__non_moving?: string;
+  custom_return_policy__short_expiry_less_than_90_days_?: number;
+  custom_return_policy__damage?: string;
+  custom_return_policy__expired_?: number;
+  // Attachment URLs
+  custom_pan_img?: string;
+  custom_gst_img?: string;
+  custom_drug_licence_img?: string;
+  custom_msme_certificate_?: string;
+  // Self Declaration
+  custom_self_declaration?: string;
+  // MSME / Udyam
+  custom_msme__udyam_number?: string;
+  custom_msme_registration_no?: string;
+  custom_msme_type?: string;
+  custom_msme_registered?: string;
+  custom_contract_done?: string;
+  custom_name_of_enterprise?: string;
+  custom_major_activity?: string;
+  custom_date_of_commencement?: string;
+  custom_organization_of_type?: string;
+  custom_address?: string;
+  // Child tables
+  custom_bank_account_details?: Array<{
+    name: string;
+    account_holder_name?: string;
+    account_number?: string;
+    ifsc_code?: string;
+    bank_name?: string;
+    branch_name?: string;
+    micr?: string;
+  }>;
+  custom_enterprise_type_list?: Array<{
+    name: string;
+    name_of_enterprise?: string;
+    major_activity?: string;
+    date_of_commencement?: string;
+  }>;
+  custom_authorized_distributors?: Array<{
+    name: string;
+    manufacturer_name?: string;
+    document?: string;
+  }>;
 }
 
 export interface StepConfig {
@@ -147,7 +224,8 @@ export const STEPS: StepConfig[] = [
   { id: 6, title: 'MSME Status', description: 'Enterprise category', icon: 'store' },
   { id: 7, title: 'Drug License', description: 'License information', icon: 'medical_services' },
   { id: 8, title: 'Commercial Details', description: 'Commercial terms', icon: 'receipt' },
-  { id: 9, title: 'Review & Submit', description: 'Final review', icon: 'send' },
+  { id: 9, title: 'Self Declaration', description: 'Declaration certificate', icon: 'verified' },
+  { id: 10, title: 'Review & Submit', description: 'Final review', icon: 'send' },
 ];
 
 export const INITIAL_FORM_DATA: OnboardingFormData = {
@@ -225,6 +303,9 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     return_short_expiry_percentage: '',
     return_damage_type: '',
     return_expired_percentage: '',
+  },
+  selfDeclaration: {
+    self_declaration_document: null,
   },
   termsAccepted: false,
 };

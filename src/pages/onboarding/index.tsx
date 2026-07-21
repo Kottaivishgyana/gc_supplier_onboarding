@@ -13,6 +13,7 @@ import { MSMEStatusStep, validateMSMEStatus } from './steps/MSMEStatusStep';
 import { DrugLicenseStep, validateDrugLicense } from './steps/DrugLicenseStep';
 import { ContactInformationStep, validateContactInformation } from './steps/ContactInformationStep';
 import { CommercialDetailsStep, validateCommercialDetails } from './steps/CommercialDetailsStep';
+import { SelfDeclarationStep, validateSelfDeclaration } from './steps/SelfDeclarationStep';
 import { ReviewSubmitStep, validateReviewSubmit } from './steps/ReviewSubmitStep';
 import { ThankYouPage } from './ThankYouPage';
 import { useOnboardingStore } from '@/stores/onboardingStore';
@@ -20,9 +21,9 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export function OnboardingPage() {
   const [messageApi, contextHolder] = message.useMessage();
-  const { 
-    currentStep, 
-    formData, 
+  const {
+    currentStep,
+    formData,
     submitForm,
     initializeFromUrl,
     isLoading,
@@ -30,6 +31,7 @@ export function OnboardingPage() {
     isSubmitted,
     error,
     supplierId,
+    supplierData,
   } = useOnboardingStore();
 
   // Initialize from URL params on mount
@@ -56,9 +58,9 @@ export function OnboardingPage() {
       case 2:
         return validateContactInformation(formData.contactInformation);
       case 3:
-        return validatePANDetails(formData.panDetails);
+        return validatePANDetails(formData.panDetails, supplierData?.custom_pan_img);
       case 4:
-        return validateGSTInfo(formData.gstInfo);
+        return validateGSTInfo(formData.gstInfo, supplierData?.custom_gst_img);
       case 5:
         return validateBankAccount(formData.bankAccount);
       case 6:
@@ -66,8 +68,10 @@ export function OnboardingPage() {
       case 7:
         return validateDrugLicense(formData.drugLicense);
       case 8:
-        return validateCommercialDetails(formData.commercialDetails);
+        return validateCommercialDetails(formData.commercialDetails, supplierData?.custom_authorized_distributors);
       case 9:
+        return validateSelfDeclaration(formData.selfDeclaration, supplierData?.custom_self_declaration);
+      case 10:
         return validateReviewSubmit(formData.termsAccepted);
       default:
         return true;
@@ -111,6 +115,8 @@ export function OnboardingPage() {
       case 8:
         return <CommercialDetailsStep />;
       case 9:
+        return <SelfDeclarationStep />;
+      case 10:
         return <ReviewSubmitStep />;
       default:
         return <BasicInfoStep />;

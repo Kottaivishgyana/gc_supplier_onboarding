@@ -1,4 +1,4 @@
-import { FileText, Upload, X } from 'lucide-react';
+import { FileText, Upload, X, CheckCircle2 } from 'lucide-react';
 import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export function DrugLicenseStep() {
-  const { formData, updateDrugLicense } = useOnboardingStore();
+  const { formData, updateDrugLicense, supplierData } = useOnboardingStore();
   const { drugLicense } = formData;
+  const existingDrugLicenseUrl = supplierData?.custom_drug_licence_img;
   
   // Safety check - ensure drugLicense exists
   if (!drugLicense) {
@@ -98,6 +99,23 @@ export function DrugLicenseStep() {
                     Upload Drug License Document
                   </Label>
                   <div className="flex flex-col gap-3">
+                    {/* Show existing attachment from ERPNext */}
+                    {existingDrugLicenseUrl && !drugLicense.drug_license_document && (
+                      <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-800 dark:text-green-400">Previously uploaded</span>
+                          <a
+                            href={`${import.meta.env.VITE_ERPNEXT_API_URL}${existingDrugLicenseUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 underline hover:text-blue-800"
+                          >
+                            View file
+                          </a>
+                        </div>
+                      </div>
+                    )}
                     {drugLicense.drug_license_document ? (
                       <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
                         <div className="flex items-center gap-3">
@@ -135,7 +153,7 @@ export function DrugLicenseStep() {
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Upload PDF, JPG, or PNG file (Max 5MB)
+                      {existingDrugLicenseUrl ? 'Upload a new file to replace the existing one, or leave as is' : 'Upload PDF, JPG, or PNG file (Max 5MB)'}
                     </p>
                   </div>
                 </div>

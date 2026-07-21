@@ -30,6 +30,75 @@ interface SupplierData {
   primary_address: string | null;
   supplier_type: string;
   country: string;
+  // Custom fields
+  custom_business_type?: string;
+  custom_drug_license_no?: string;
+  custom_verification_status?: string;
+  // Contact Information
+  custom_transaction_contact_name?: string;
+  custom_transaction_contact?: string;
+  custom_transaction_email?: string;
+  custom_escalation_contact_name?: string;
+  custom_escalation_role?: string;
+  custom_escalation_contact?: string;
+  custom_escalation_email?: string;
+  custom_contact_name_2?: string;
+  custom_role_2?: string;
+  custom_contact_2?: string;
+  custom_email_2?: string;
+  custom_contact_name_3?: string;
+  custom_role_3?: string;
+  custom_contact_3?: string;
+  custom_email_3?: string;
+  // Commercial Details
+  custom_credit_days_from_delivery_date?: string;
+  custom_delivery?: string;
+  custom_discount_?: string;
+  custom_invoice_discount_type?: string;
+  custom_invoice_discount_?: number;
+  custom_manufacturers_authorized_distributor?: string;
+  custom_return_policy__non_moving?: string;
+  custom_return_policy__short_expiry_less_than_90_days_?: number;
+  custom_return_policy__damage?: string;
+  custom_return_policy__expired_?: number;
+  // Attachment URLs
+  custom_pan_img?: string;
+  custom_gst_img?: string;
+  custom_drug_licence_img?: string;
+  custom_msme_certificate_?: string;
+  custom_self_declaration?: string;
+  // MSME / Udyam
+  custom_msme__udyam_number?: string;
+  custom_msme_registration_no?: string;
+  custom_msme_type?: string;
+  custom_msme_registered?: string;
+  custom_contract_done?: string;
+  custom_name_of_enterprise?: string;
+  custom_major_activity?: string;
+  custom_date_of_commencement?: string;
+  custom_organization_of_type?: string;
+  custom_address?: string;
+  // Child tables
+  custom_bank_account_details?: Array<{
+    name: string;
+    account_holder_name?: string;
+    account_number?: string;
+    ifsc_code?: string;
+    bank_name?: string;
+    branch_name?: string;
+    micr?: string;
+  }>;
+  custom_enterprise_type_list?: Array<{
+    name: string;
+    name_of_enterprise?: string;
+    major_activity?: string;
+    date_of_commencement?: string;
+  }>;
+  custom_authorized_distributors?: Array<{
+    name: string;
+    manufacturer_name?: string;
+    document?: string;
+  }>;
 }
 
 interface SupplierUpdatePayload {
@@ -77,6 +146,7 @@ interface SupplierUpdatePayload {
   custom_pan_img?: string;
   custom_gst_img?: string;
   custom_drug_licence_img?: string; // Note: spelling is "licence"
+  custom_self_declaration?: string;
   // Authorized distributors (Child Table)
   custom_authorized_distributors?: Array<{
     manufacturer_name: string;
@@ -130,6 +200,22 @@ interface BankAccountPayload {
   party: string;
   is_default: number;
   is_company_account: number;
+}
+
+// Address data fetched from ERPNext
+export interface AddressData {
+  name: string;
+  address_title: string;
+  address_type: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  country: string;
+  pincode: string;
+  email_id?: string;
+  is_primary_address: number;
+  is_shipping_address: number;
 }
 
 // Request headers with authentication
@@ -209,6 +295,41 @@ export async function getSupplier(supplierName: string): Promise<SupplierData> {
   }
 
   return result.data;
+}
+
+/**
+ * Fetch addresses linked to a supplier
+ */
+export async function getSupplierAddresses(supplierName: string): Promise<AddressData[]> {
+  try {
+    // Fetch addresses linked to this supplier via Dynamic Link
+    const filters = JSON.stringify([
+      ['Dynamic Link', 'link_doctype', '=', 'Supplier'],
+      ['Dynamic Link', 'link_name', '=', supplierName],
+    ]);
+    const fields = JSON.stringify(['name', 'address_title', 'address_type', 'address_line1', 'address_line2', 'city', 'state', 'country', 'pincode', 'email_id', 'is_primary_address', 'is_shipping_address']);
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/resource/Address?filters=${encodeURIComponent(filters)}&fields=${encodeURIComponent(fields)}&limit_page_length=10`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+        mode: 'cors',
+        credentials: 'omit',
+      }
+    );
+
+    if (!response.ok) {
+      console.warn('Failed to fetch supplier addresses:', response.statusText);
+      return [];
+    }
+
+    const result = await response.json();
+    return (result.data || []) as AddressData[];
+  } catch (error) {
+    console.error('Error fetching supplier addresses:', error);
+    return [];
+  }
 }
 
 /**
@@ -762,6 +883,9 @@ export async function submitOnboardingData(
       return_damage_type: 'Replacement' | '100% CN' | '';
       return_expired_percentage: string;
     };
+    selfDeclaration?: {
+      self_declaration_document?: File | null;
+    };
   }
 ): Promise<{ success: boolean; message: string }> {
   try {
@@ -803,6 +927,16 @@ export async function submitOnboardingData(
         fileUploads.msme_document = msmeFileUrl;
       } catch (error) {
         console.error('Failed to upload MSME document:', error);
+      }
+    }
+
+    // Upload Self Declaration document
+    if (formData.selfDeclaration?.self_declaration_document) {
+      try {
+        const selfDeclUrl = await uploadFile(formData.selfDeclaration.self_declaration_document, supplierName, 'Home/Attachments');
+        fileUploads.self_declaration_document = selfDeclUrl;
+      } catch (error) {
+        console.error('Failed to upload self declaration document:', error);
       }
     }
 
@@ -925,6 +1059,9 @@ export async function submitOnboardingData(
       }),
       ...(fileUploads.msme_document && {
         custom_msme_certificate_: fileUploads.msme_document,
+      }),
+      ...(fileUploads.self_declaration_document && {
+        custom_self_declaration: fileUploads.self_declaration_document,
       }),
       // Set verification status to "Pending for verification" when form is submitted
       custom_verification_status: 'Pending for verification',

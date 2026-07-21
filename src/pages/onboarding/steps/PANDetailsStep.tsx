@@ -9,8 +9,9 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyPAN } from '@/services/surepassApi';
 
 export function PANDetailsStep() {
-  const { formData, updatePANDetails, setPANVerificationStatus } = useOnboardingStore();
+  const { formData, updatePANDetails, setPANVerificationStatus, supplierData } = useOnboardingStore();
   const { panDetails, basicInfo } = formData;
+  const existingPanUrl = supplierData?.custom_pan_img;
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string>('');
@@ -200,6 +201,23 @@ export function PANDetailsStep() {
                 Upload PAN Document <span className="text-destructive">*</span>
               </Label>
               <div className="flex flex-col gap-3">
+                {/* Show existing attachment from ERPNext */}
+                {existingPanUrl && !panDetails.pan_document && (
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-800 dark:text-green-400">Previously uploaded</span>
+                      <a
+                        href={`${import.meta.env.VITE_ERPNEXT_API_URL}${existingPanUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 underline hover:text-blue-800"
+                      >
+                        View file
+                      </a>
+                    </div>
+                  </div>
+                )}
                 {panDetails.pan_document ? (
                   <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
                     <div className="flex items-center gap-3">
@@ -237,7 +255,7 @@ export function PANDetailsStep() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Upload PDF, JPG, or PNG file (Max 5MB)
+                  {existingPanUrl ? 'Upload a new file to replace the existing one, or leave as is' : 'Upload PDF, JPG, or PNG file (Max 5MB)'}
                 </p>
               </div>
             </div>
@@ -254,13 +272,13 @@ export function validatePANDetails(data: {
   full_name: string;
   dob: string;
   pan_document?: File | null;
-}): boolean {
+}, existingPanUrl?: string): boolean {
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
   const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
-  
+
   // Destroy previous messages to show only one error at a time
   message.destroy();
-  
+
   if (!data.pan_number.trim()) {
     message.error({ content: 'Please enter PAN number', key: 'validation-error' });
     return false;
@@ -281,11 +299,12 @@ export function validatePANDetails(data: {
     message.error({ content: 'Please enter date of birth in YYYY-MM-DD format (e.g., 2003-03-13)', key: 'validation-error' });
     return false;
   }
-  if (!data.pan_document) {
+  // Accept either new file upload OR existing attachment from ERPNext
+  if (!data.pan_document && !existingPanUrl) {
     message.error({ content: 'Please upload PAN document', key: 'validation-error' });
     return false;
   }
-  if (data.pan_document.size > 5 * 1024 * 1024) {
+  if (data.pan_document && data.pan_document.size > 5 * 1024 * 1024) {
     message.error({ content: 'PAN document size should be less than 5MB', key: 'validation-error' });
     return false;
   }

@@ -1,4 +1,4 @@
-import { Check, Badge, CreditCard, FileText, Building2, Store, Send, Pill, ContactRound, Receipt } from 'lucide-react';
+import { Check, Badge, CreditCard, FileText, Building2, Store, Send, Pill, ContactRound, Receipt, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { STEPS } from '@/types/onboarding';
 import { useOnboardingStore } from '@/stores/onboardingStore';
@@ -12,6 +12,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   medical_services: Pill,
   contact_mail: ContactRound,
   receipt: Receipt,
+  verified: ShieldCheck,
   send: Send,
 };
 

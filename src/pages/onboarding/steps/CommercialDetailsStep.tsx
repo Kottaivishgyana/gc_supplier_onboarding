@@ -563,10 +563,10 @@ export function validateCommercialDetails(data: {
   return_short_expiry_percentage: string;
   return_damage_type: string;
   return_expired_percentage: string;
-}): boolean {
+}, existingDistributors?: Array<{ manufacturer_name?: string; document?: string }>): boolean {
   // Destroy previous messages to show only one error at a time
   message.destroy();
-  
+
   if (!data.discount_basis) {
     message.error({ content: 'Please select discount basis (On PTS/On PTR/On MRP)', key: 'validation-error' });
     return false;
@@ -599,11 +599,15 @@ export function validateCommercialDetails(data: {
         message.error({ content: `Please enter manufacturer name for item ${i + 1}`, key: 'validation-error' });
         return false;
       }
-      if (!item.document) {
+      // Accept either new file OR existing document URL from ERPNext
+      const hasExistingDoc = existingDistributors?.some(
+        d => d.manufacturer_name === item.manufacturer_name && d.document
+      );
+      if (!item.document && !hasExistingDoc) {
         message.error({ content: `Please upload document for ${item.manufacturer_name || `item ${i + 1}`}`, key: 'validation-error' });
         return false;
       }
-      if (item.document.size > 5 * 1024 * 1024) {
+      if (item.document && item.document.size > 5 * 1024 * 1024) {
         message.error({ content: `Document for ${item.manufacturer_name} exceeds 5MB limit`, key: 'validation-error' });
         return false;
       }

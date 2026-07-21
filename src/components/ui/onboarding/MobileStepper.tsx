@@ -1,4 +1,4 @@
-import { Badge, CreditCard, FileText, Building2, Store, Send, Pill, ContactRound, Receipt } from 'lucide-react';
+import { Badge, CreditCard, FileText, Building2, Store, Send, Pill, ContactRound, Receipt, ShieldCheck } from 'lucide-react';
 import { STEPS } from '@/types/onboarding';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
@@ -11,13 +11,14 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   medical_services: Pill,
   contact_mail: ContactRound,
   receipt: Receipt,
+  verified: ShieldCheck,
   send: Send,
 };
 
 export function MobileStepper() {
   const { currentStep } = useOnboardingStore();
   const currentStepConfig = STEPS.find((s) => s.id === currentStep);
-  const Icon = currentStepConfig ? ICONS[currentStepConfig.icon] : Badge;
+  const Icon = currentStepConfig ? (ICONS[currentStepConfig.icon] || Badge) : Badge;
 
   return (
     <div className="lg:hidden mb-6 flex items-center justify-between bg-card p-4 rounded-lg border">
