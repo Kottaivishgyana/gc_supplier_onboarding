@@ -49,6 +49,7 @@ export async function generateSamplePDF(): Promise<void> {
       msmeStatus: {
         msme_status: 'yes' as const,
         msme_number: 'UDYAM-KA-06-0001234',
+        msme_type: 'Small' as const,
         msme_document: null,
       },
       drugLicense: {
@@ -84,6 +85,10 @@ export async function generateSamplePDF(): Promise<void> {
         return_short_expiry_percentage: '50',
         return_damage_type: 'Replacement' as const,
         return_expired_percentage: '100',
+      },
+      selfDeclaration: {
+        self_declaration_agreed: true,
+        self_declaration_document: null,
       },
       termsAccepted: true,
     };

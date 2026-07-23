@@ -1,8 +1,9 @@
 /**
  * ERPNext API Service for Supplier Onboarding
- * 
+ *
  * This service handles all API communications with Frappe ERPNext
  */
+import type { OnboardingFormData } from '@/types/onboarding';
 
 // API Configuration - Update these values for your ERPNext instance
 const RAW_API_URL = import.meta.env.VITE_ERPNEXT_API_URL ;
@@ -1314,7 +1315,7 @@ export async function submitOnboardingData(
         selfDeclaration: formData.selfDeclaration || INITIAL_FORM_DATA.selfDeclaration,
         termsAccepted: true,
       };
-      const agreementFile = await generateSupplierAgreementFile(allFormData, supplierName);
+      const agreementFile = await generateSupplierAgreementFile(allFormData as OnboardingFormData, supplierName);
       const agreementUrl = await uploadFile(agreementFile, supplierName, 'Home/Attachments');
 
       if (agreementUrl) {
