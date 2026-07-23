@@ -1,0 +1,73 @@
+# Server Script: Send Re-verification Email on Request Changes
+# Script Type: DocType Event
+# Reference DocType: Supplier
+# DocType Event: Before Save
+#
+# This script triggers when the workflow state changes to "Changes Requested"
+# (or whatever the workflow state is named for "Request Changes" action).
+# It sends an email to the supplier with the reason/comments and the onboarding link.
+#
+# IMPORTANT: Update the workflow_state value below to match your actual workflow state name.
+
+# Check if workflow state changed to "Changes Requested"
+if doc.has_value_changed("workflow_state") and doc.workflow_state == "Changes Requested":
+    if doc.email_id:
+        import urllib.parse
+
+        supplier_name_encoded = urllib.parse.quote(doc.name)
+        onboarding_url = "https://gc-supplier-onboarding-git-main-kottai-samy-ks-projects.vercel.app/?supplier=" + supplier_name_encoded
+
+        # Get the comment/reason from the workflow action
+        # Frappe stores the latest comment in the _comment_count or via comment API
+        # The workflow comment is passed via frappe.flags or the comment doctype
+        comment_text = ""
+
+        # Try to get the latest workflow comment
+        comments = frappe.get_all(
+            "Comment",
+            filters={
+                "reference_doctype": "Supplier",
+                "reference_name": doc.name,
+                "comment_type": "Workflow"
+            },
+            fields=["content"],
+            order_by="creation desc",
+            limit=1
+        )
+
+        if comments:
+            comment_text = comments[0].get("content", "")
+
+        # Fallback: check if custom field exists for change reason
+        if not comment_text and hasattr(doc, "custom_change_reason"):
+            comment_text = doc.custom_change_reason or ""
+
+        subject = "Action Required: Please Re-verify Your Onboarding Details - Geri Care"
+
+        message = "<div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>"
+        message += "<p>Dear " + doc.supplier_name + ",</p>"
+        message += "<p>We have reviewed your vendor onboarding submission and require some changes to be made.</p>"
+
+        if comment_text:
+            message += "<div style='background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 16px; margin: 16px 0; border-radius: 4px;'>"
+            message += "<p style='margin: 0; font-weight: bold; color: #92400E;'>Reason for Changes:</p>"
+            message += "<p style='margin: 8px 0 0 0; color: #78350F;'>" + comment_text + "</p>"
+            message += "</div>"
+
+        message += "<p>Please click the button below to access your onboarding form and update the required details:</p>"
+        message += '<p style="text-align: center; margin: 24px 0;">'
+        message += '<a href="' + onboarding_url + '" style="background-color: #DC2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">Re-verify Onboarding Details</a>'
+        message += "</p>"
+        message += "<p>This link is unique to your account. Please do not share it with others.</p>"
+        message += "<p>If you have any questions, please contact our procurement team.</p>"
+        message += "<p>Best regards,<br>Geri Care Hospital</p>"
+        message += "</div>"
+
+        frappe.sendmail(
+            recipients=[doc.email_id],
+            subject=subject,
+            message=message,
+            now=True
+        )
+
+        frappe.msgprint("Re-verification email sent to " + doc.email_id, alert=True)

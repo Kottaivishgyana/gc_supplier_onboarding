@@ -6,6 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyMSME } from '@/services/surepassApi';
 
@@ -212,6 +219,26 @@ export function MSMEStatusStep() {
                   <p className="text-sm text-muted-foreground">
                     Format: UDYAM-XX-00-0000000
                   </p>
+                </div>
+
+                {/* MSME Type */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="msme_type">
+                    MSME Type <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={msmeStatus.msme_type}
+                    onValueChange={(value) => updateMSMEStatus({ msme_type: value as 'Micro' | 'Small' | 'Medium' })}
+                  >
+                    <SelectTrigger className="h-14">
+                      <SelectValue placeholder="Select MSME Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Micro">Micro</SelectItem>
+                      <SelectItem value="Small">Small</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Verify Button */}

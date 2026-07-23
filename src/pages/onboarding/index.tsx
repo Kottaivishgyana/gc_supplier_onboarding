@@ -70,7 +70,7 @@ export function OnboardingPage() {
       case 8:
         return validateCommercialDetails(formData.commercialDetails, supplierData?.custom_authorized_distributors);
       case 9:
-        return validateSelfDeclaration(formData.selfDeclaration, supplierData?.custom_self_declaration);
+        return validateSelfDeclaration(formData.selfDeclaration);
       case 10:
         return validateReviewSubmit(formData.termsAccepted);
       default:
@@ -170,6 +170,19 @@ export function OnboardingPage() {
     <>
       {contextHolder}
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        {/* Header */}
+        <header className="bg-white dark:bg-slate-900 border-b shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-200">Vendor Onboarding</h1>
+            <img
+              src="/Geri_Care_Logo_nEw.jpg"
+              alt="Geri Care"
+              className="h-16 object-contain"
+            />
+            <div className="w-[140px]" />
+          </div>
+        </header>
+
         <div className="flex flex-1 justify-center py-8 px-4 sm:px-6 lg:px-8">
         <div className="flex w-full max-w-7xl gap-8 lg:gap-16">
           {/* Sidebar Stepper */}

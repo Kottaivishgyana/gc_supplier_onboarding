@@ -288,7 +288,7 @@ export function validatePANDetails(data: {
     return false;
   }
   if (!data.full_name.trim()) {
-    message.error({ content: 'Please enter full name (as per PAN)', key: 'validation-error' });
+    message.error({ content: 'Please verify your PAN', key: 'validation-error' });
     return false;
   }
   if (!data.dob) {

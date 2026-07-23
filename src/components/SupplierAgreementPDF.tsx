@@ -757,6 +757,77 @@ export function SupplierAgreementPDF({
           </View>
         </View>
       </PageWithImage>
+
+      {/* Page 5: Self Declaration */}
+      <PageWithImage geriCareImageBase64={geriCareImageBase64}>
+        <Text style={styles.sectionTitle}>SELF DECLARATION</Text>
+
+        <View style={{ marginTop: 15, lineHeight: 1.6 }}>
+          <Text style={{ fontSize: 10, marginBottom: 12, textAlign: 'justify' }}>
+            <Text style={{ fontWeight: 'bold' }}>{formData.basicInfo.company_name || '[Supplier Name]'}</Text>
+            {' '}hereby assure / declare to Geri Care Groups that, we will not involve in any kind of unethical practices, including the below listed activities either before/after the awarding of the order or on the completion of the administrative task in Geri Care Group:
+          </Text>
+
+          <View style={styles.termsList}>
+            <Text style={styles.termsListNumber}>1.</Text>
+            <Text style={styles.termsListText}>
+              Any direct or indirect promise, offer, authorization or provision of anything of value to any of the personnel at Geri Care or their family member or relative.
+            </Text>
+          </View>
+
+          <View style={styles.termsList}>
+            <Text style={styles.termsListNumber}>2.</Text>
+            <Text style={styles.termsListText}>
+              Any offer of kickback, loan, fee, commission, reward or other advantage to any of the personnel at Geri Care or their family member or relative.
+            </Text>
+          </View>
+
+          <View style={styles.termsList}>
+            <Text style={styles.termsListNumber}>3.</Text>
+            <Text style={styles.termsListText}>
+              Any kind of contributions or donations which intend to or are designed or stipulated to influence the recipient (who is personnel of Geri Care or their relative) to act in the giver's favour.
+            </Text>
+          </View>
+
+          <View style={styles.termsList}>
+            <Text style={styles.termsListNumber}>4.</Text>
+            <Text style={styles.termsListText}>
+              In the event of knowledge of any of unethical practices at Geri Care, the supplier agrees to bring to the notice of the same to Geri Care by email to vppurchase@gericare.in & drlpr@gericare.in without any delay.
+            </Text>
+          </View>
+
+          <View style={styles.termsList}>
+            <Text style={styles.termsListNumber}>5.</Text>
+            <Text style={styles.termsListText}>
+              In the event of any such unethical practices being identified and proven by Geri Care against the supplier or its employees, the supplier agrees to immediate termination of the agreement and also to forego any outstanding amount payable to the supplier from entire Geri Care group without any further claims or litigation on Geri Care Group.
+            </Text>
+          </View>
+
+          <View style={{ marginTop: 20, padding: 10, border: '1pt solid #000', backgroundColor: '#f9f9f9' }}>
+            <Text style={{ fontSize: 10, fontWeight: 'bold' }}>
+              {formData.selfDeclaration.self_declaration_agreed
+                ? `✓ I Agree - Accepted by ${formData.basicInfo.company_name || '[Supplier Name]'}`
+                : '☐ Pending Agreement'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.signatureSection, { marginTop: 40 }]}>
+          <View style={styles.signatureBox}>
+            <Text style={styles.label}>For {formData.basicInfo.company_name || '[Supplier Name]'}</Text>
+            <View style={styles.signatureLine}>
+              <Text style={styles.label}>Authorized Signatory</Text>
+            </View>
+          </View>
+
+          <View style={styles.signatureBox}>
+            <Text style={styles.label}>Date</Text>
+            <View style={styles.signatureLine}>
+              <Text style={styles.label}>{currentDate}</Text>
+            </View>
+          </View>
+        </View>
+      </PageWithImage>
     </Document>
   );
 }

@@ -24,6 +24,7 @@ interface SupplierData {
   supplier_name: string;
   email_id: string | null;
   mobile_no: string | null;
+  custom_phone_no?: string;
   gstin: string | null;
   pan: string | null;
   gst_category: string | null;
@@ -67,6 +68,7 @@ interface SupplierData {
   custom_drug_licence_img?: string;
   custom_msme_certificate_?: string;
   custom_self_declaration?: string;
+  custom_supplier_agreement?: string;
   // MSME / Udyam
   custom_msme__udyam_number?: string;
   custom_msme_registration_no?: string;
@@ -105,6 +107,7 @@ interface SupplierUpdatePayload {
   supplier_name: string;
   email_id: string;
   mobile_no: string;
+  custom_phone_no?: string;
   pan: string;
   gstin: string;
   gst_category: string;
@@ -147,6 +150,7 @@ interface SupplierUpdatePayload {
   custom_gst_img?: string;
   custom_drug_licence_img?: string; // Note: spelling is "licence"
   custom_self_declaration?: string;
+  custom_supplier_agreement?: string;
   // Authorized distributors (Child Table)
   custom_authorized_distributors?: Array<{
     manufacturer_name: string;
@@ -369,6 +373,27 @@ export async function linkSupplierPortalUser(
   if (!email) return;
 
   try {
+    // Check if portal user link already exists by reading supplier's portal_users
+    const supplierResponse = await fetch(
+      `${API_BASE_URL}/api/resource/Supplier/${encodeURIComponent(supplierName)}`,
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    if (supplierResponse.ok) {
+      const supplierData = await supplierResponse.json();
+      const portalUsers = supplierData.data?.portal_users || [];
+      const alreadyLinked = portalUsers.some(
+        (pu: { user: string }) => pu.user === email
+      );
+      if (alreadyLinked) {
+        console.log('Portal user already linked:', email);
+        return;
+      }
+    }
+
     // Create Portal User row linking this supplier to the existing User
     const payload = {
       doctype: 'Portal User',
@@ -386,7 +411,6 @@ export async function linkSupplierPortalUser(
 
     if (!response.ok) {
       const error = await response.json();
-      // If portal user already exists, ERPNext may throw; log and continue
       console.warn('Failed to create Portal User link:', error);
     }
   } catch (error) {
@@ -639,6 +663,7 @@ export async function updateSupplierBankAccounts(
 
 /**
  * Create or update address for supplier
+ * Checks for existing linked address first to avoid duplicates
  */
 export async function createAddress(
   supplierName: string,
@@ -652,6 +677,46 @@ export async function createAddress(
   addressType: 'Billing' | 'Shipping' = 'Billing',
   isPrimary: boolean = true
 ): Promise<void> {
+  // Check for existing address linked to this supplier
+  try {
+    const existingAddresses = await getSupplierAddresses(supplierName);
+    const existingAddress = isPrimary
+      ? existingAddresses.find(a => a.is_primary_address === 1) || existingAddresses[0]
+      : existingAddresses.find(a => a.address_type === addressType && a.is_primary_address !== 1);
+
+    if (existingAddress) {
+      // Update existing address
+      const updatePayload = {
+        address_line1: addressData.address_line1,
+        city: addressData.city,
+        state: addressData.state,
+        country: 'India',
+        pincode: addressData.pincode,
+        email_id: addressData.email_id,
+      };
+
+      const updateResponse = await fetch(
+        `${API_BASE_URL}/api/resource/Address/${encodeURIComponent(existingAddress.name)}`,
+        {
+          method: 'PUT',
+          headers: getHeaders(),
+          body: JSON.stringify(updatePayload),
+        }
+      );
+
+      if (!updateResponse.ok) {
+        const error = await updateResponse.json();
+        console.error('Failed to update address:', error);
+        throw new Error(error.exception || `Failed to update address: ${updateResponse.statusText}`);
+      }
+      return;
+    }
+  } catch (error) {
+    // If checking/updating fails, fall through to create
+    console.warn('Error checking existing address, will create new:', error);
+  }
+
+  // No existing address found — create new
   const payload: AddressPayload = {
     doctype: 'Address',
     address_title: `${supplierName}-${addressType}`,
@@ -685,7 +750,8 @@ export async function createAddress(
 }
 
 /**
- * Create bank account for supplier
+ * Create or update bank account for supplier
+ * Checks for existing bank account to avoid duplicates
  */
 export async function createBankAccount(
   supplierName: string,
@@ -700,13 +766,57 @@ export async function createBankAccount(
   // First, ensure the Bank exists
   await ensureBankExists(bankData.bank_name);
 
+  // Check for existing bank account linked to this supplier
+  try {
+    const checkResponse = await fetch(
+      `${API_BASE_URL}/api/resource/Bank Account?filters=${encodeURIComponent(JSON.stringify([["party_type","=","Supplier"],["party","=",supplierName]]))}` +
+      `&fields=${encodeURIComponent(JSON.stringify(["name","bank_account_no"]))}` +
+      '&limit_page_length=5',
+      {
+        method: 'GET',
+        headers: getHeaders(),
+      }
+    );
+
+    if (checkResponse.ok) {
+      const result = await checkResponse.json();
+      const existing = (result.data || []) as Array<{ name: string; bank_account_no: string }>;
+
+      if (existing.length > 0) {
+        // Update first existing bank account
+        const updatePayload = {
+          bank: bankData.bank_name,
+          branch_code: bankData.ifsc_code,
+          bank_account_no: bankData.account_number,
+        };
+
+        const updateResponse = await fetch(
+          `${API_BASE_URL}/api/resource/Bank Account/${encodeURIComponent(existing[0].name)}`,
+          {
+            method: 'PUT',
+            headers: getHeaders(),
+            body: JSON.stringify(updatePayload),
+          }
+        );
+
+        if (!updateResponse.ok) {
+          console.error('Failed to update bank account:', await updateResponse.json());
+        }
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn('Error checking existing bank account, will create new:', error);
+  }
+
+  // No existing bank account — create new
   const payload: BankAccountPayload = {
     doctype: 'Bank Account',
     account_name: `${supplierName} - ${bankData.bank_name}`,
     bank: bankData.bank_name,
     branch_code: bankData.ifsc_code,
     bank_account_no: bankData.account_number,
-    iban: '', // Not required for Indian banks
+    iban: '',
     party_type: 'Supplier',
     party: supplierName,
     is_default: 1,
@@ -836,6 +946,7 @@ export async function submitOnboardingData(
     msmeStatus?: {
       msme_status: string;
       msme_number: string;
+      msme_type?: string;
       msme_document?: File | null;
       verification_data?: {
         name_of_enterprise?: string;
@@ -978,6 +1089,7 @@ export async function submitOnboardingData(
       supplier_name: formData.basicInfo.company_name,
       email_id: formData.basicInfo.email,
       mobile_no: formData.basicInfo.phone,
+      custom_phone_no: formData.basicInfo.phone,
       pan: formData.panDetails.pan_number,
       gstin: formData.gstInfo.gst_status === 'registered' ? formData.gstInfo.gst_number : '',
       gst_category: formData.gstInfo.gst_status === 'registered' ? 'Registered Regular' : 'Unregistered',
@@ -994,11 +1106,8 @@ export async function submitOnboardingData(
         custom_msme__udyam_number: formData.msmeStatus.msme_number || '',
         // MSME registration number (same as udyam number)
         custom_msme_registration_no: formData.msmeStatus.msme_number || '',
-        // MSME type from enterprise_type_list (get first entry's enterprise_type)
-        custom_msme_type: formData.msmeStatus.verification_data?.enterprise_type_list && 
-                          formData.msmeStatus.verification_data.enterprise_type_list.length > 0
-          ? formData.msmeStatus.verification_data.enterprise_type_list[0].enterprise_type || ''
-          : '',
+        // MSME type from dropdown selection
+        custom_msme_type: formData.msmeStatus.msme_type || '',
         // MSME verification details from API response - always include if verification_data exists
         ...(formData.msmeStatus.verification_data ? {
           custom_name_of_enterprise: formData.msmeStatus.verification_data.name_of_enterprise || '',
@@ -1184,6 +1293,43 @@ export async function submitOnboardingData(
       });
     } catch (error) {
       console.error('Failed to update bank account child table:', error);
+      // Continue even if this fails
+    }
+
+    // 7. Generate and upload Supplier Agreement PDF
+    try {
+      const { generateSupplierAgreementFile } = await import('@/utils/generatePDF');
+      // Use dynamic import to get INITIAL_FORM_DATA for defaults
+      const { INITIAL_FORM_DATA } = await import('@/types/onboarding');
+      const allFormData = {
+        ...INITIAL_FORM_DATA,
+        basicInfo: formData.basicInfo,
+        panDetails: { ...INITIAL_FORM_DATA.panDetails, ...formData.panDetails },
+        gstInfo: formData.gstInfo,
+        bankAccount: formData.bankAccount,
+        msmeStatus: formData.msmeStatus || INITIAL_FORM_DATA.msmeStatus,
+        drugLicense: formData.drugLicense || INITIAL_FORM_DATA.drugLicense,
+        contactInformation: formData.contactInformation || INITIAL_FORM_DATA.contactInformation,
+        commercialDetails: formData.commercialDetails || INITIAL_FORM_DATA.commercialDetails,
+        selfDeclaration: formData.selfDeclaration || INITIAL_FORM_DATA.selfDeclaration,
+        termsAccepted: true,
+      };
+      const agreementFile = await generateSupplierAgreementFile(allFormData, supplierName);
+      const agreementUrl = await uploadFile(agreementFile, supplierName, 'Home/Attachments');
+
+      if (agreementUrl) {
+        await updateSupplier(supplierName, {
+          supplier_name: formData.basicInfo.company_name,
+          email_id: formData.basicInfo.email,
+          mobile_no: formData.basicInfo.phone,
+          pan: formData.panDetails.pan_number,
+          gstin: formData.gstInfo.gst_number,
+          gst_category: formData.gstInfo.gst_status === 'registered' ? 'Registered Regular' : 'Unregistered',
+          custom_supplier_agreement: agreementUrl,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to generate/upload supplier agreement PDF:', error);
       // Continue even if this fails
     }
 

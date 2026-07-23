@@ -40,6 +40,7 @@ export interface BankAccountData {
 export interface MSMEStatusData {
   msme_status: 'yes' | 'no' | '';
   msme_number: string;
+  msme_type: 'Micro' | 'Small' | 'Medium' | '';
   msme_document?: File | null;
   // MSME verification response data
   verification_data?: {
@@ -108,6 +109,7 @@ export interface CommercialDetailsData {
 }
 
 export interface SelfDeclarationData {
+  self_declaration_agreed: boolean;
   self_declaration_document?: File | null;
 }
 
@@ -130,6 +132,7 @@ export interface SupplierApiData {
   supplier_name: string;
   email_id: string | null;
   mobile_no: string | null;
+  custom_phone_no?: string;
   gstin: string | null;
   pan: string | null;
   gst_category: string | null;
@@ -266,6 +269,7 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
   msmeStatus: {
     msme_status: '',
     msme_number: '',
+    msme_type: '',
     msme_document: null,
     verification_data: undefined,
   },
@@ -305,6 +309,7 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
     return_expired_percentage: '',
   },
   selfDeclaration: {
+    self_declaration_agreed: false,
     self_declaration_document: null,
   },
   termsAccepted: false,

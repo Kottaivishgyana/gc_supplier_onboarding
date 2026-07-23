@@ -584,7 +584,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         custom_business_type: supplierData.custom_business_type,
         custom_transaction_contact_name: supplierData.custom_transaction_contact_name,
         custom_drug_license_no: supplierData.custom_drug_license_no,
-        custom_msme__udyam_number: supplierData.custom_msme__udyam_number,
+        custom_msme__udyam_number: (supplierData.custom_msme__udyam_number || supplierData.custom_msme_registration_no),
         custom_discount_: supplierData.custom_discount_,
         custom_pan_img: supplierData.custom_pan_img,
         custom_gst_img: supplierData.custom_gst_img,
@@ -625,14 +625,14 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
       } : undefined;
 
       // Determine MSME status from ERPNext data
-      const msmeStatus = supplierData.custom_msme_registered === 'Yes' || supplierData.custom_msme__udyam_number
+      const msmeStatus = supplierData.custom_msme_registered === 'Yes' || (supplierData.custom_msme__udyam_number || supplierData.custom_msme_registration_no)
         ? 'yes' as const
         : supplierData.custom_msme_registered === 'No'
           ? 'no' as const
           : '' as const;
 
       // Determine drug license status
-      const drugLicenseStatus = supplierData.custom_drug_license_no
+      const drugLicenseStatus = (supplierData.custom_drug_license_no || '').trim()
         ? 'yes' as const
         : '' as const;
 
@@ -653,7 +653,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
           ...INITIAL_FORM_DATA.basicInfo,
           company_name: cachedData?.basicInfo?.company_name || supplierData.supplier_name || '',
           email: cachedData?.basicInfo?.email || supplierData.email_id || '',
-          phone: cachedData?.basicInfo?.phone || supplierData.mobile_no || '',
+          phone: cachedData?.basicInfo?.phone || supplierData.custom_phone_no || supplierData.mobile_no || '',
           business_type: cachedData?.basicInfo?.business_type || supplierData.custom_business_type || '',
           address: cachedData?.basicInfo?.address || primaryAddress?.address_line1 || '',
           city: cachedData?.basicInfo?.city || primaryAddress?.city || '',
@@ -694,14 +694,15 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         msmeStatus: {
           ...INITIAL_FORM_DATA.msmeStatus,
           msme_status: cachedData?.msmeStatus?.msme_status || msmeStatus,
-          msme_number: cachedData?.msmeStatus?.msme_number || supplierData.custom_msme__udyam_number || '',
+          msme_number: cachedData?.msmeStatus?.msme_number || (supplierData.custom_msme__udyam_number || supplierData.custom_msme_registration_no) || '',
+          msme_type: cachedData?.msmeStatus?.msme_type || (supplierData.custom_msme_type as 'Micro' | 'Small' | 'Medium' | '') || '',
           verification_data: cachedData?.msmeStatus?.verification_data || msmeVerificationData,
           msme_document: cachedData?.msmeStatus?.msme_document || null,
         },
         drugLicense: {
           ...INITIAL_FORM_DATA.drugLicense,
           drug_license_status: cachedData?.drugLicense?.drug_license_status || drugLicenseStatus,
-          drug_license_number: cachedData?.drugLicense?.drug_license_number || supplierData.custom_drug_license_no || '',
+          drug_license_number: cachedData?.drugLicense?.drug_license_number || (supplierData.custom_drug_license_no || '').trim(),
           drug_license_document: cachedData?.drugLicense?.drug_license_document || null,
         },
         contactInformation: {

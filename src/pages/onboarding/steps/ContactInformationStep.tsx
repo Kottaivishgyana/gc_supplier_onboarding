@@ -149,10 +149,10 @@ export function ContactInformationStep() {
                   </div>
                 </div>
 
-                {/* HOD/Proprietor/Head Radio Selection */}
+                {/* Manager/Proprietor Radio Selection */}
                 <div className="flex flex-col gap-3">
                   <Label>
-                    HOD/Proprietor/Head <span className="text-destructive">*</span>
+                    Manager/Proprietor <span className="text-destructive">*</span>
                   </Label>
                   <RadioGroup
                     value={contactInformation.escalation_role}
@@ -164,19 +164,13 @@ export function ContactInformationStep() {
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="hod" id="escalation_hod" />
                       <Label htmlFor="escalation_hod" className="font-normal cursor-pointer">
-                        HOD
+                        Manager
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="proprietor" id="escalation_proprietor" />
                       <Label htmlFor="escalation_proprietor" className="font-normal cursor-pointer">
                         Proprietor
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="head" id="escalation_head" />
-                      <Label htmlFor="escalation_head" className="font-normal cursor-pointer">
-                        Head
                       </Label>
                     </div>
                   </RadioGroup>
@@ -259,7 +253,7 @@ export function ContactInformationStep() {
                 {/* HOD/Proprietor/Head Radio Selection */}
                 <div className="flex flex-col gap-3">
                   <Label>
-                    HOD/Proprietor/Head <span className="text-destructive">*</span>
+                    Manager/Proprietor <span className="text-destructive">*</span>
                   </Label>
                   <RadioGroup
                     value={contactInformation.additional_contact2_role || ''}
@@ -271,19 +265,13 @@ export function ContactInformationStep() {
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="hod" id="additional_contact2_hod" />
                       <Label htmlFor="additional_contact2_hod" className="font-normal cursor-pointer">
-                        HOD
+                        Manager
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <RadioGroupItem value="proprietor" id="additional_contact2_proprietor" />
                       <Label htmlFor="additional_contact2_proprietor" className="font-normal cursor-pointer">
                         Proprietor
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="head" id="additional_contact2_head" />
-                      <Label htmlFor="additional_contact2_head" className="font-normal cursor-pointer">
-                        Head
                       </Label>
                     </div>
                   </RadioGroup>
@@ -384,7 +372,7 @@ export function ContactInformationStep() {
                     {/* HOD/Proprietor/Head Radio Selection */}
                     <div className="flex flex-col gap-3">
                       <Label>
-                        HOD/Proprietor/Head
+                        Manager/Proprietor
                       </Label>
                       <RadioGroup
                         value={contactInformation.additional_contact_role || ''}
@@ -396,19 +384,13 @@ export function ContactInformationStep() {
                         <div className="flex items-center gap-2">
                           <RadioGroupItem value="hod" id="additional_hod" />
                           <Label htmlFor="additional_hod" className="font-normal cursor-pointer">
-                            HOD
+                            Manager
                           </Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <RadioGroupItem value="proprietor" id="additional_proprietor" />
                           <Label htmlFor="additional_proprietor" className="font-normal cursor-pointer">
                             Proprietor
-                          </Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="head" id="additional_head" />
-                          <Label htmlFor="additional_head" className="font-normal cursor-pointer">
-                            Head
                           </Label>
                         </div>
                       </RadioGroup>
