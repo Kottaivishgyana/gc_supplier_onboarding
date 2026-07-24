@@ -168,6 +168,7 @@ interface SupplierUpdatePayload {
   // Contract status
   custom_contract_done?: string;
   custom_msme_registered?: string;
+  custom_drug_license?: string;
   // MSME verification details
   custom_name_of_enterprise?: string;
   custom_major_activity?: string;
@@ -941,6 +942,7 @@ export async function submitOnboardingData(
       micr?: string;
     };
     drugLicense?: {
+      drug_license_status?: string;
       drug_license_number: string;
       drug_license_document?: File | null;
     };
@@ -1120,7 +1122,8 @@ export async function submitOnboardingData(
       }),
       // Contract done - default to "yes" for all suppliers
       custom_contract_done: 'Yes',
-      custom_msme_registered:'Yes',
+      custom_msme_registered: formData.msmeStatus?.msme_status === 'yes' ? 'Yes' : 'No',
+      custom_drug_license: formData.drugLicense?.drug_license_status === 'yes' ? 'Yes' : 'No',
       // Contact Information - Transaction
       ...(formData.contactInformation && {
         custom_transaction_contact_name: formData.contactInformation.transaction_name,
