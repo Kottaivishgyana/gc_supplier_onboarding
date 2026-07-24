@@ -34,6 +34,7 @@ interface SupplierData {
   country: string;
   // Custom fields
   custom_business_type?: string;
+  custom_drug_license?: string;
   custom_drug_license_no?: string;
   custom_verification_status?: string;
   // Contact Information

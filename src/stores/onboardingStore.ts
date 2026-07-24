@@ -631,10 +631,12 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
           ? 'no' as const
           : '' as const;
 
-      // Determine drug license status
-      const drugLicenseStatus = (supplierData.custom_drug_license_no || '').trim()
+      // Determine drug license status from custom_drug_license (Yes/No) or fallback to checking number
+      const drugLicenseStatus = supplierData.custom_drug_license === 'Yes' || (supplierData.custom_drug_license_no || '').trim()
         ? 'yes' as const
-        : '' as const;
+        : supplierData.custom_drug_license === 'No'
+          ? 'no' as const
+          : '' as const;
 
       // Map escalation/contact roles
       const mapRole = (role?: string): 'hod' | 'proprietor' | 'head' | '' => {
