@@ -319,12 +319,20 @@ export function ReviewSubmitStep() {
               icon={<Pill className="w-5 h-5 text-primary" />}
               onEdit={() => goToStep(7)}
             >
-              <ReviewItem label="Drug License Number" value={drugLicense.drug_license_number} />
-              {drugLicense.drug_license_document && (
-                <ReviewItem 
-                  label="Document" 
-                  value={drugLicense.drug_license_document.name || 'Uploaded'} 
-                />
+              <ReviewItem
+                label="Drug License"
+                value={drugLicense.drug_license_status === 'yes' ? 'Yes' : drugLicense.drug_license_status === 'no' ? 'No' : '—'}
+              />
+              {drugLicense.drug_license_status === 'yes' && (
+                <>
+                  <ReviewItem label="Drug License Number" value={drugLicense.drug_license_number} />
+                  {drugLicense.drug_license_document && (
+                    <ReviewItem
+                      label="Document"
+                      value={drugLicense.drug_license_document.name || 'Uploaded'}
+                    />
+                  )}
+                </>
               )}
             </ReviewSection>
 
