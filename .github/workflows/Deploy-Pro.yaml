@@ -1,0 +1,56 @@
+name: Deploy-Production
+
+on:
+  push:
+    branches:
+      - pro
+  workflow_dispatch:
+
+jobs:
+  Setup:
+    name: Setup
+    runs-on: gericare-workspace-server
+    environment: ${{ github.ref_name }}
+
+    steps:
+      - name: Fetch Application Configuration
+        run: |
+          if [ "${{ github.ref_name }}" = "pro" ]; then
+            export ENV_PATH="production/server"
+          else
+            export ENV_PATH="workspace/${{ github.ref_name }}/server"
+          fi
+
+          curl -fsSL --insecure \
+            -H "X-API-TOKEN: $API_KEY" \
+            "https://api.configurations.projects.vgts/internal/api/configurations/applications/50/fetch/$ENV_PATH/?format=dotenv&includeSecrets=true&includeEmptyValues=true&followInheritance=true&includeGlobal=false" \
+            -o .env
+        env:
+          API_KEY: ${{ secrets.CONFIGURATION_MANAGEMENT_API_KEY }}
+
+      - name: Upload ENV File to Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: env_file
+          path: .env
+          if-no-files-found: error
+          retention-days: 1
+          include-hidden-files: true
+
+  Build:
+    name: Build
+    needs: Setup
+    uses: ./.github/workflows/build.yaml
+
+  Deploy:
+    name: Deploy
+    needs: Build
+    runs-on: gericare-production
+    environment: ${{ github.ref_name }}
+
+    steps:
+      - name: Download Build Files
+        uses: actions/download-artifact@v8
+        with:
+          name: build
+          path: ${{ github.ref_name }}

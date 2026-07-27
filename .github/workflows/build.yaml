@@ -1,0 +1,44 @@
+name: Build
+
+on:
+
+  workflow_dispatch:
+
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout Code from Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Download Configuration File
+        uses: actions/download-artifact@v8
+        with:
+          name: env_file
+          merge-multiple: true
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Application
+        run: bun run build
+
+      - name: Upload Build Artifact
+        id: build-artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 7
