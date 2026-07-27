@@ -110,7 +110,7 @@ export async function verifyPAN(data: PANVerifyRequest): Promise<PANVerifyRespon
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to verify PAN. Please try again.',
+      message: error instanceof Error ? error.message : 'Failed to verify PAN. Please try again.'
     };
   }
 }
