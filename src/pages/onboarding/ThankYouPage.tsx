@@ -50,10 +50,10 @@ export function ThankYouPage() {
             {/* Message */}
             <div className="flex flex-col gap-3 max-w-md">
               <p className="text-muted-foreground">
-                Our team will review your documents and get back to you within 3-5 business days.
+                Our team will review your documents and get back to you within 3-5 business days, if any changes are required.
               </p>
               <p className="text-sm text-muted-foreground">
-                You can download a copy of your supplier agreement for your records.
+                You can download a copy of your supplier agreement below.
               </p>
             </div>
 
@@ -86,7 +86,8 @@ export function ThankYouPage() {
             {/* Additional Info */}
             <div className="mt-6 pt-6 border-t w-full">
               <p className="text-sm text-muted-foreground">
-                If you have any questions or need assistance, please contact our support team.
+                If you have any questions or need assistance, please contact Geri Care Purchase team -{' '}
+                <a href="mailto:gmpurchase@gericare.in" className="text-primary underline font-medium">gmpurchase@gericare.in</a>
               </p>
             </div>
           </div>
