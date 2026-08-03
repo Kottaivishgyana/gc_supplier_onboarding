@@ -70,7 +70,7 @@ export function OnboardingPage() {
       case 8:
         return validateCommercialDetails(formData.commercialDetails, supplierData?.custom_authorized_distributors);
       case 9:
-        return validateSelfDeclaration(formData.selfDeclaration);
+        return validateSelfDeclaration(formData.selfDeclaration, formData.signatureData);
       case 10:
         return validateReviewSubmit(formData.termsAccepted);
       default:

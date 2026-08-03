@@ -1,13 +1,38 @@
+import { useRef, useEffect } from 'react';
 import { message } from 'antd';
+import SignatureCanvas from 'react-signature-canvas';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export function SelfDeclarationStep() {
-  const { formData, updateSelfDeclaration } = useOnboardingStore();
-  const { selfDeclaration, basicInfo } = formData;
+  const { formData, updateSelfDeclaration, setSignatureData } = useOnboardingStore();
+  const { selfDeclaration, basicInfo, signatureData } = formData;
   const supplierName = basicInfo.company_name || '[Supplier Name]';
+  const sigCanvasRef = useRef<SignatureCanvas>(null);
+
+  // Restore signature from store when component mounts
+  useEffect(() => {
+    if (signatureData && sigCanvasRef.current) {
+      sigCanvasRef.current.fromDataURL(signatureData);
+    }
+  }, []);
+
+  const handleSignatureEnd = () => {
+    if (sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
+      const dataUrl = sigCanvasRef.current.toDataURL('image/png');
+      setSignatureData(dataUrl);
+    }
+  };
+
+  const handleClearSignature = () => {
+    if (sigCanvasRef.current) {
+      sigCanvasRef.current.clear();
+    }
+    setSignatureData('');
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,6 +94,40 @@ export function SelfDeclarationStep() {
                 <span className="text-destructive"> *</span>
               </Label>
             </div>
+
+            {/* Digital Signature */}
+            <div className="p-4 border rounded-lg bg-white dark:bg-slate-800">
+              <Label className="text-sm font-medium mb-3 block">
+                Digital Signature <span className="text-destructive">*</span>
+              </Label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Please sign below using your mouse or touch screen.
+              </p>
+              <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden bg-white">
+                <SignatureCanvas
+                  ref={sigCanvasRef}
+                  penColor="black"
+                  canvasProps={{
+                    className: 'w-full',
+                    style: { width: '100%', height: '200px' },
+                  }}
+                  onEnd={handleSignatureEnd}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-3">
+                <p className="text-xs text-muted-foreground">
+                  {signatureData ? '✓ Signature captured' : 'No signature yet'}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearSignature}
+                >
+                  Clear Signature
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -79,11 +138,16 @@ export function SelfDeclarationStep() {
 // eslint-disable-next-line react-refresh/only-export-components
 export function validateSelfDeclaration(
   data: { self_declaration_agreed: boolean },
+  signatureData: string,
 ): boolean {
   message.destroy();
 
   if (!data.self_declaration_agreed) {
     message.error({ content: 'Please agree to the Self Declaration to proceed', key: 'validation-error' });
+    return false;
+  }
+  if (!signatureData) {
+    message.error({ content: 'Please provide your digital signature to proceed', key: 'validation-error' });
     return false;
   }
   return true;

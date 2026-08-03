@@ -152,6 +152,7 @@ interface SupplierUpdatePayload {
   custom_gst_img?: string;
   custom_drug_licence_img?: string; // Note: spelling is "licence"
   custom_self_declaration?: string;
+  custom_signature?: string;
   custom_supplier_agreement?: string;
   // Authorized distributors (Child Table)
   custom_authorized_distributors?: Array<{
@@ -1001,6 +1002,7 @@ export async function submitOnboardingData(
     selfDeclaration?: {
       self_declaration_document?: File | null;
     };
+    signatureData?: string;
   }
 ): Promise<{ success: boolean; message: string }> {
   try {
@@ -1052,6 +1054,25 @@ export async function submitOnboardingData(
         fileUploads.self_declaration_document = selfDeclUrl;
       } catch (error) {
         console.error('Failed to upload self declaration document:', error);
+      }
+    }
+
+    // Upload digital signature as PNG image
+    if (formData.signatureData) {
+      try {
+        const base64Data = formData.signatureData.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/png' });
+        const signatureFile = new File([blob], `Signature_${supplierName}_${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+        const signatureUrl = await uploadFile(signatureFile, supplierName, 'Home/Attachments');
+        fileUploads.signature = signatureUrl;
+      } catch (error) {
+        console.error('Failed to upload digital signature:', error);
       }
     }
 
@@ -1176,6 +1197,9 @@ export async function submitOnboardingData(
       }),
       ...(fileUploads.self_declaration_document && {
         custom_self_declaration: fileUploads.self_declaration_document,
+      }),
+      ...(fileUploads.signature && {
+        custom_signature: fileUploads.signature,
       }),
       // Set verification status to "Pending for verification" when form is submitted
       custom_verification_status: 'Pending for verification',

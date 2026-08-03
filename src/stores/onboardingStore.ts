@@ -393,6 +393,7 @@ interface OnboardingStore {
   updateCommercialDetails: (data: Partial<CommercialDetailsData>) => void;
   updateSelfDeclaration: (data: Partial<SelfDeclarationData>) => void;
   setTermsAccepted: (accepted: boolean) => void;
+  setSignatureData: (data: string) => void;
   setPANVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
   setGSTVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
   setBankVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
@@ -533,6 +534,13 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   setTermsAccepted: (accepted) => {
     const state = get();
     const newFormData = { ...state.formData, termsAccepted: accepted };
+    set({ formData: newFormData });
+    saveToCache(state.supplierId, newFormData);
+  },
+
+  setSignatureData: (data) => {
+    const state = get();
+    const newFormData = { ...state.formData, signatureData: data };
     set({ formData: newFormData });
     saveToCache(state.supplierId, newFormData);
   },
@@ -747,6 +755,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
           self_declaration_document: cachedData?.selfDeclaration?.self_declaration_document || null,
         },
         termsAccepted: cachedData?.termsAccepted || false,
+        signatureData: cachedData?.signatureData || '',
       };
 
       // Debug: log merged form data

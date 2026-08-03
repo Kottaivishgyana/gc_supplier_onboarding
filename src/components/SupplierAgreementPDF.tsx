@@ -815,7 +815,14 @@ export function SupplierAgreementPDF({
         <View style={[styles.signatureSection, { marginTop: 40 }]}>
           <View style={styles.signatureBox}>
             <Text style={styles.label}>For {formData.basicInfo.company_name || '[Supplier Name]'}</Text>
-            <View style={styles.signatureLine}>
+            {formData.signatureData ? (
+              <View style={{ marginTop: 10, marginBottom: 5 }}>
+                <Image src={formData.signatureData} style={{ width: 180, height: 60 }} />
+              </View>
+            ) : (
+              <View style={styles.signatureLine} />
+            )}
+            <View style={{ borderTop: '1pt solid #000', paddingTop: 4 }}>
               <Text style={styles.label}>Authorized Signatory</Text>
             </View>
           </View>
