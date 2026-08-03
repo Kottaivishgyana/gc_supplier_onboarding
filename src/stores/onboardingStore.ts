@@ -806,6 +806,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         contactInformation: formData.contactInformation,
         commercialDetails: formData.commercialDetails,
         selfDeclaration: formData.selfDeclaration,
+        signatureData: formData.signatureData,
       });
 
       if (result.success) {

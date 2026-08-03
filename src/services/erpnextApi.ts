@@ -1342,6 +1342,7 @@ export async function submitOnboardingData(
         commercialDetails: formData.commercialDetails || INITIAL_FORM_DATA.commercialDetails,
         selfDeclaration: formData.selfDeclaration || INITIAL_FORM_DATA.selfDeclaration,
         termsAccepted: true,
+        signatureData: formData.signatureData || '',
       };
       const agreementFile = await generateSupplierAgreementFile(allFormData as OnboardingFormData, supplierName);
       const agreementUrl = await uploadFile(agreementFile, supplierName, 'Home/Attachments');
