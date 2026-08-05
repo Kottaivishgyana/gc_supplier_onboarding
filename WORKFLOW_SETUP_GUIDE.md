@@ -9,6 +9,7 @@ The state names in the workflow **MUST** match exactly with the options in your 
 - ✅ `Pending for verification` (NOT "Pending")
 - ✅ `Verified` (NOT "Approved")
 - ✅ `Rejected`
+
 - ✅ `Changes Required`
 
 ## Overview
