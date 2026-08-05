@@ -1003,6 +1003,8 @@ export async function submitOnboardingData(
       self_declaration_document?: File | null;
     };
     signatureData?: string;
+    signatureTimestamp?: string;
+    signaturePlace?: string;
   }
 ): Promise<{ success: boolean; message: string }> {
   try {
@@ -1200,6 +1202,12 @@ export async function submitOnboardingData(
       }),
       ...(fileUploads.signature && {
         custom_signature: fileUploads.signature,
+      }),
+      ...(formData.signatureTimestamp && {
+        custom_signature_time: new Date(formData.signatureTimestamp).toLocaleString('en-CA', { timeZone: 'Asia/Kolkata', hour12: false }).replace(',', ''),
+      }),
+      ...(formData.signaturePlace && {
+        custom_signature_place: formData.signaturePlace,
       }),
       // Set verification status to "Pending for verification" when form is submitted
       custom_verification_status: 'Pending for verification',

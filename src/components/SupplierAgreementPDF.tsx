@@ -148,8 +148,8 @@ const styles = StyleSheet.create({
     textDecoration: 'underline',
   },
   termsList: {
-    marginBottom: 8,
-    lineHeight: 1.4,
+    marginBottom: 4,
+    lineHeight: 1.3,
     textAlign: 'justify',
     flexDirection: 'row',
   },
@@ -736,12 +736,9 @@ export function SupplierAgreementPDF({
             </View>
           </View>
 
-          <Text style={styles.termsText}>
-            Please accord your acknowledgement and acceptance of this agreement by signing this agreement with your stamp.
-          </Text>
         </View>
 
-        <View style={styles.signatureSection}>
+        {/* <View style={styles.signatureSection}>
           <View style={styles.signatureBox}>
             <Text style={styles.label}>For Geri Care</Text>
             <View style={styles.signatureLine}>
@@ -755,7 +752,7 @@ export function SupplierAgreementPDF({
               <Text style={styles.label}>Authorized Signatory</Text>
             </View>
           </View>
-        </View>
+        </View> */}
       </PageWithImage>
 
       {/* Page 5: Self Declaration */}
@@ -803,17 +800,10 @@ export function SupplierAgreementPDF({
             </Text>
           </View>
 
-          <View style={{ marginTop: 20, padding: 10, border: '1pt solid #000', backgroundColor: '#f9f9f9' }}>
-            <Text style={{ fontSize: 10, fontWeight: 'bold' }}>
-              {formData.selfDeclaration.self_declaration_agreed
-                ? `✓ I Agree - Accepted by ${formData.basicInfo.company_name || '[Supplier Name]'}`
-                : '☐ Pending Agreement'}
-            </Text>
-          </View>
         </View>
 
-        <View style={[styles.signatureSection, { marginTop: 40 }]}>
-          <View style={styles.signatureBox}>
+        <View style={{ marginTop: 40, alignItems: 'flex-end' }}>
+          <View style={{ width: 250 }}>
             <Text style={styles.label}>For {formData.basicInfo.company_name || '[Supplier Name]'}</Text>
             {formData.signatureData ? (
               <View style={{ marginTop: 10, marginBottom: 5 }}>
@@ -824,13 +814,16 @@ export function SupplierAgreementPDF({
             )}
             <View style={{ borderTop: '1pt solid #000', paddingTop: 4 }}>
               <Text style={styles.label}>Authorized Signatory</Text>
-            </View>
-          </View>
-
-          <View style={styles.signatureBox}>
-            <Text style={styles.label}>Date</Text>
-            <View style={styles.signatureLine}>
-              <Text style={styles.label}>{currentDate}</Text>
+              {formData.signatureTimestamp && (
+                <Text style={[styles.label, { fontSize: 7, color: '#666', marginTop: 2 }]}>
+                  Signed on: {new Date(formData.signatureTimestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                </Text>
+              )}
+              {formData.signaturePlace && (
+                <Text style={[styles.label, { fontSize: 7, color: '#666', marginTop: 1 }]}>
+                  Place: {formData.signaturePlace}
+                </Text>
+              )}
             </View>
           </View>
         </View>

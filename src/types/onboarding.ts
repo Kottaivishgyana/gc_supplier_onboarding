@@ -125,6 +125,8 @@ export interface OnboardingFormData {
   selfDeclaration: SelfDeclarationData;
   termsAccepted: boolean;
   signatureData: string;
+  signatureTimestamp: string;
+  signaturePlace: string;
 }
 
 // Supplier data from ERPNext (full data including custom fields)
@@ -316,6 +318,8 @@ export const INITIAL_FORM_DATA: OnboardingFormData = {
   },
   termsAccepted: false,
   signatureData: '',
+  signatureTimestamp: '',
+  signaturePlace: '',
 };
 
 export const INDIAN_STATES = [

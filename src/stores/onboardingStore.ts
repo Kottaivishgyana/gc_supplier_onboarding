@@ -394,6 +394,7 @@ interface OnboardingStore {
   updateSelfDeclaration: (data: Partial<SelfDeclarationData>) => void;
   setTermsAccepted: (accepted: boolean) => void;
   setSignatureData: (data: string) => void;
+  setSignaturePlace: (place: string) => void;
   setPANVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
   setGSTVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
   setBankVerificationStatus: (status: 'success' | 'error' | 'pending' | null) => void;
@@ -540,7 +541,18 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
 
   setSignatureData: (data) => {
     const state = get();
-    const newFormData = { ...state.formData, signatureData: data };
+    const newFormData = {
+      ...state.formData,
+      signatureData: data,
+      signatureTimestamp: data ? new Date().toISOString() : '',
+    };
+    set({ formData: newFormData });
+    saveToCache(state.supplierId, newFormData);
+  },
+
+  setSignaturePlace: (place) => {
+    const state = get();
+    const newFormData = { ...state.formData, signaturePlace: place };
     set({ formData: newFormData });
     saveToCache(state.supplierId, newFormData);
   },
@@ -807,6 +819,8 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         commercialDetails: formData.commercialDetails,
         selfDeclaration: formData.selfDeclaration,
         signatureData: formData.signatureData,
+        signatureTimestamp: formData.signatureTimestamp,
+        signaturePlace: formData.signaturePlace,
       });
 
       if (result.success) {

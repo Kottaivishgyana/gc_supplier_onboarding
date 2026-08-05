@@ -5,11 +5,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export function SelfDeclarationStep() {
-  const { formData, updateSelfDeclaration, setSignatureData } = useOnboardingStore();
-  const { selfDeclaration, basicInfo, signatureData } = formData;
+  const { formData, updateSelfDeclaration, setSignatureData, setSignaturePlace } = useOnboardingStore();
+  const { selfDeclaration, basicInfo, signatureData, signatureTimestamp, signaturePlace } = formData;
   const supplierName = basicInfo.company_name || '[Supplier Name]';
   const sigCanvasRef = useRef<SignatureCanvas>(null);
 
@@ -116,7 +117,9 @@ export function SelfDeclarationStep() {
               </div>
               <div className="flex items-center justify-between mt-3">
                 <p className="text-xs text-muted-foreground">
-                  {signatureData ? '✓ Signature captured' : 'No signature yet'}
+                  {signatureData
+                    ? `✓ Signature captured on ${new Date(signatureTimestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`
+                    : 'No signature yet'}
                 </p>
                 <Button
                   type="button"
@@ -127,6 +130,19 @@ export function SelfDeclarationStep() {
                   Clear Signature
                 </Button>
               </div>
+            </div>
+
+            {/* Place */}
+            <div className="p-4 border rounded-lg bg-white dark:bg-slate-800">
+              <Label htmlFor="signature_place" className="text-sm font-medium mb-2 block">
+                Place <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="signature_place"
+                placeholder="Enter place of signing"
+                value={signaturePlace}
+                onChange={(e) => setSignaturePlace(e.target.value)}
+              />
             </div>
           </div>
         </CardContent>
@@ -139,6 +155,7 @@ export function SelfDeclarationStep() {
 export function validateSelfDeclaration(
   data: { self_declaration_agreed: boolean },
   signatureData: string,
+  signaturePlace?: string,
 ): boolean {
   message.destroy();
 
@@ -148,6 +165,10 @@ export function validateSelfDeclaration(
   }
   if (!signatureData) {
     message.error({ content: 'Please provide your digital signature to proceed', key: 'validation-error' });
+    return false;
+  }
+  if (!signaturePlace?.trim()) {
+    message.error({ content: 'Please enter the place of signing', key: 'validation-error' });
     return false;
   }
   return true;
