@@ -375,9 +375,9 @@ export function CommercialDetailsStep() {
                   />
                   <RotateCcw className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
                 </div>
-                {/* <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   CN value: 100%
-                </p> */}
+                </p>
               </div>
 
               {/* Short expiry */}
