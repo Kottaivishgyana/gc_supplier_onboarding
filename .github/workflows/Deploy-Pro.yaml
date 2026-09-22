@@ -7,61 +7,88 @@ on:
   workflow_dispatch:
 
 jobs:
-  Setup:
-    name: Setup
-    runs-on: gericare-workspace-server
+  Deploy:
+    name: Build and Deploy
+    runs-on: gericare-production
     environment: ${{ github.ref_name }}
 
     steps:
-      # - name: Fetch Application Configuration
-      #   run: |
-      #     if [ "${{ github.ref_name }}" = "pro" ]; then
-      #       export ENV_PATH="production/server"
-      #     else
-      #       export ENV_PATH="workspace/${{ github.ref_name }}/server"
-      #     fi
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          path: ${{ github.ref_name }}
+          clean: true
 
-      #     curl -fsSL --insecure \
-      #       -H "X-API-TOKEN: $API_KEY" \
-      #       "https://api.configurations.projects.vgts/internal/api/configurations/applications/50/fetch/$ENV_PATH/?format=dotenv&includeSecrets=true&includeEmptyValues=true&followInheritance=true&includeGlobal=false" \
-      #       -o .env
-      #   env:
-      #     API_KEY: ${{ secrets.CONFIGURATION_MANAGEMENT_API_KEY }}
       - name: Create Environment File
+        working-directory: ${{ github.ref_name }}
         run: |
           printf '%s\n' "$ENV_FILE" > .env
+
+          echo "Environment file created"
+          ls -lah .env
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
 
       - name: View Environment File
+        working-directory: ${{ github.ref_name }}
         run: |
           echo "===== .env content ====="
           cat .env
           echo "========================"
 
-      - name: Upload ENV File to Artifacts
-        uses: actions/upload-artifact@v7
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          name: env_file
-          path: .env
-          if-no-files-found: error
-          retention-days: 1
-          include-hidden-files: true
+          bun-version: latest
 
-  Build:
-    name: Build
-    needs: Setup
-    uses: ./.github/workflows/build.yaml
+      - name: Install Dependencies
+        working-directory: ${{ github.ref_name }}
+        run: |
+          bun install --frozen-lockfile
 
-  Deploy:
-    name: Deploy
-    needs: Build
-    runs-on: gericare-production
-    environment: ${{ github.ref_name }}
+      - name: Build Application
+        working-directory: ${{ github.ref_name }}
+        run: |
+          echo "Building application"
+          echo "Source path:"
+          pwd
 
-    steps:
-      - name: Download Build Files
-        uses: actions/download-artifact@v8
-        with:
-          name: build
-          path: ${{ github.ref_name }}
+          bun run build
+
+      - name: Deploy Application
+        working-directory: ${{ github.ref_name }}
+        run: |
+          DEPLOY_PATH="/var/www/html/${{ github.event.repository.name }}/${{ github.ref_name }}"
+
+          echo "Deploying application"
+          echo "Source path:"
+          pwd
+          echo "Deploy path: $DEPLOY_PATH"
+
+          mkdir -p "$DEPLOY_PATH"
+
+          rm -rf "$DEPLOY_PATH"/*
+
+          cp -a dist/. "$DEPLOY_PATH/"
+
+          echo "Deployment completed"
+          echo "Files deployed:"
+          ls -lah "$DEPLOY_PATH"
+
+      - name: Verify Deployment
+        working-directory: ${{ github.ref_name }}
+        run: |
+          DEPLOY_PATH="/var/www/html/${{ github.event.repository.name }}/${{ github.ref_name }}"
+
+          if [ ! -f "$DEPLOY_PATH/index.html" ]; then
+            echo "ERROR: index.html not found in $DEPLOY_PATH"
+            exit 1
+          fi
+
+          echo "Deployment verified successfully"
+          echo "Source path:"
+          pwd
+          echo "Deployment path:"
+          echo "$DEPLOY_PATH"
+
+          ls -lah "$DEPLOY_PATH/index.html"
