@@ -1,9 +1,7 @@
 /**
  * SurePass API Service for PAN, GST, Bank Account, and MSME Verification
+ * Calls are proxied through Vercel serverless functions to keep tokens server-side.
  */
-
-const SUREPASS_BASE_URL = import.meta.env.VITE_SUREPASS_BASE_URL || '';
-const SUREPASS_AUTH_TOKEN = import.meta.env.VITE_SUREPASS_AUTH_TOKEN || '';
 
 interface PANVerifyRequest {
   pan_number: string;
@@ -56,32 +54,19 @@ interface PANVerifyResponse {
 }
 
 /**
- * Verify PAN details using SurePass Comprehensive PAN API
+ * Verify PAN details via serverless proxy
  */
 export async function verifyPAN(data: PANVerifyRequest): Promise<PANVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  // Remove trailing slash from base URL
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/pan/pan-comprehensive`;
-
   try {
-    const response = await fetch(url, {
+    const response = await fetch('/api/surepass-pan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
       },
       body: JSON.stringify({
         id_number: data.pan_number.toUpperCase().trim(),
-        get_address:true,// Default get address boolean yes
+        get_address: true,
       }),
     });
 
@@ -94,7 +79,6 @@ export async function verifyPAN(data: PANVerifyRequest): Promise<PANVerifyRespon
       };
     }
 
-    // Handle non-200 responses
     let errorMessage = 'PAN verification failed';
     try {
       const errorData = await response.json();
@@ -138,28 +122,15 @@ interface GSTVerifyResponse {
 }
 
 /**
- * Verify GSTIN using SurePass API
+ * Verify GSTIN via serverless proxy
  */
 export async function verifyGST(data: GSTVerifyRequest): Promise<GSTVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  // Remove trailing slash from base URL
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/corporate/gstin`;
-
   try {
-    const response = await fetch(url, {
+    const response = await fetch('/api/surepass-gst', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
       },
       body: JSON.stringify({
         id_number: data.gstin.toUpperCase().trim(),
@@ -176,7 +147,6 @@ export async function verifyGST(data: GSTVerifyRequest): Promise<GSTVerifyRespon
       };
     }
 
-    // Handle non-200 responses
     let errorMessage = 'GST verification failed';
     if (responseData.message) {
       errorMessage = responseData.message;
@@ -223,28 +193,15 @@ interface BankAccountVerifyResponse {
 }
 
 /**
- * Verify Bank Account using SurePass API
+ * Verify Bank Account via serverless proxy
  */
 export async function verifyBankAccount(data: BankAccountVerifyRequest): Promise<BankAccountVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  // Remove trailing slash from base URL
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/bank-verification/`;
-
   try {
-    const response = await fetch(url, {
+    const response = await fetch('/api/surepass-bank', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
       },
       body: JSON.stringify({
         id_number: data.account_number.trim(),
@@ -263,7 +220,6 @@ export async function verifyBankAccount(data: BankAccountVerifyRequest): Promise
       };
     }
 
-    // Handle non-200 responses
     let errorMessage = 'Bank account verification failed';
     if (responseData.message) {
       errorMessage = responseData.message;
@@ -326,40 +282,20 @@ interface MSMEVerifyResponse {
 }
 
 /**
- * Verify MSME/Udyam Registration Number using SurePass API
+ * Verify MSME/Udyam Registration Number via serverless proxy
  */
 export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  // Remove trailing slash from base URL
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/corporate/udyog-aadhaar`;
-
-  // Create AbortController for timeout handling
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 30 seconds timeout
-
   try {
-    const response = await fetch(url, {
+    const response = await fetch('/api/surepass-msme', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
       },
       body: JSON.stringify({
         id_number: data.uan.toUpperCase().trim(),
       }),
-      signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     const responseData = await response.json().catch(() => ({}));
 
@@ -371,7 +307,6 @@ export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyRes
       };
     }
 
-    // Handle non-200 responses
     let errorMessage = 'MSME verification failed';
     if (responseData.message) {
       errorMessage = responseData.message;
@@ -387,12 +322,9 @@ export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyRes
       data: responseData,
     };
   } catch (error) {
-    clearTimeout(timeoutId);
-    
-    // Check if it's a timeout/abort error or network error
     if (error instanceof Error) {
-      if (error.name === 'AbortError' || 
-          error.message.includes('timeout') || 
+      if (error.name === 'AbortError' ||
+          error.message.includes('timeout') ||
           error.message.includes('aborted') ||
           error.message.includes('Failed to fetch') ||
           error.message.includes('network')) {
@@ -402,7 +334,7 @@ export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyRes
         };
       }
     }
-    
+
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to verify MSME. Please try again.',

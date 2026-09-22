@@ -11,4 +11,28 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api/surepass': {
+        target: 'https://kyc-api.surepass.app',
+        changeOrigin: true,
+        rewrite: (path) => {
+          const endpoint = path.replace('/api/surepass-', '');
+          const routes: Record<string, string> = {
+            pan: '/api/v1/pan/pan-comprehensive',
+            gst: '/api/v1/corporate/gstin',
+            bank: '/api/v1/bank-verification/',
+            msme: '/api/v1/corporate/udyog-aadhaar',
+          };
+          return routes[endpoint] || path;
+        },
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            const token = process.env.VITE_SUREPASS_AUTH_TOKEN || '';
+            proxyReq.setHeader('Authorization', `Bearer ${token}`);
+          });
+        },
+      },
+    },
+  },
 })
