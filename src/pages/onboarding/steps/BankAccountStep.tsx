@@ -239,7 +239,8 @@ export function BankAccountStep() {
                   onChange={(e) =>
                     updateBankAccount({ bank_name: e.target.value })
                   }
-                  className="pr-12 h-14"
+                  readOnly
+                  className="pr-12 h-14 bg-muted"
                 />
                 <Landmark className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
               </div>
@@ -258,7 +259,8 @@ export function BankAccountStep() {
                   onChange={(e) =>
                     updateBankAccount({ branch_name: e.target.value })
                   }
-                  className="pr-12 h-14"
+                  readOnly
+                  className="pr-12 h-14 bg-muted"
                 />
                 <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
               </div>
