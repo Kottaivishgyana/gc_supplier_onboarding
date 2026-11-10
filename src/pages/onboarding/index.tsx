@@ -197,7 +197,7 @@ export function OnboardingPage() {
               </div>
               <div className="flex flex-col gap-3 max-w-md">
                 <p className="text-muted-foreground">
-                  Your documents have been submitted and are being reviewed by our team. No further action is required from your end.
+                  Your documents have been submitted and are being currently reviewed by the Geri Care Purchase Team. No further action is required from your end.
                 </p>
               </div>
               <div className="mt-6 pt-6 border-t w-full">
