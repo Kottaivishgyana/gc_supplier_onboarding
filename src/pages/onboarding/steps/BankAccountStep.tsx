@@ -9,7 +9,7 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyBankAccount } from '@/services/surepassApi';
 
 export function BankAccountStep() {
-  const { formData, updateBankAccount, setBankVerificationStatus } = useOnboardingStore();
+  const { formData, updateBankAccount, setBankVerificationStatus, supplierId } = useOnboardingStore();
   const { bankAccount } = formData;
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'success' | 'error' | null>(null);
@@ -45,36 +45,25 @@ export function BankAccountStep() {
       const result = await verifyBankAccount({
         account_number: bankAccount.account_number,
         ifsc_code: bankAccount.ifsc_code,
+        uhid: supplierId || '',
       });
 
       if (result.success && result.data) {
-        // Extract bank details from response
-        // Response structure: result.data.data.ifsc_details
-        const responseData = result.data.data as { 
-          ifsc_details?: { 
-            micr?: string;
-            bank_name?: string;
-            branch?: string;
-          } 
-        } | undefined;
-        
-        const ifscDetails = responseData?.ifsc_details;
-        
-        // Update bank account fields with verified data
+        // Server script returns flattened bank details
         const updates: { micr?: string; bank_name?: string; branch_name?: string } = {};
-        
-        if (ifscDetails?.micr) {
-          updates.micr = ifscDetails.micr;
+
+        if (result.data.micr) {
+          updates.micr = result.data.micr;
         }
-        
-        if (ifscDetails?.bank_name) {
-          updates.bank_name = ifscDetails.bank_name;
+
+        if (result.data.bank_name) {
+          updates.bank_name = result.data.bank_name;
         }
-        
-        if (ifscDetails?.branch) {
-          updates.branch_name = ifscDetails.branch;
+
+        if (result.data.branch_name) {
+          updates.branch_name = result.data.branch_name;
         }
-        
+
         // Update bank account with extracted data
         if (Object.keys(updates).length > 0) {
           updateBankAccount(updates);
@@ -209,7 +198,7 @@ export function BankAccountStep() {
 
                 {verificationStatus && !isVerifying && (
                   <div
-                    className={`flex items-center gap-2 p-3 rounded-lg ${
+                    className={`flex items-center gap-2 p-3 rounded-lg overflow-hidden ${
                       verificationStatus === 'success'
                         ? 'bg-green-50 text-green-800 border border-green-200'
                         : 'bg-red-50 text-red-800 border border-red-200'
@@ -220,7 +209,7 @@ export function BankAccountStep() {
                     ) : (
                       <AlertCircle className="w-5 h-5 flex-shrink-0" />
                     )}
-                    <span className="text-sm font-medium">{verificationMessage}</span>
+                    <span className="text-sm font-medium break-words overflow-hidden">{verificationMessage}</span>
                   </div>
                 )}
               </div>

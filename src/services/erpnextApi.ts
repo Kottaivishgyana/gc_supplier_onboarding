@@ -254,6 +254,59 @@ function getFileUploadHeaders(): HeadersInit {
 }
 
 /**
+ * Check onboarding link status via server-side validation (expiry, completed, etc.)
+ */
+export type OnboardingStatus = 'valid' | 'expired' | 'completed' | 'invalid' | 'error';
+
+export async function checkOnboardingStatus(uhid: string): Promise<{ status: OnboardingStatus; supplier_name?: string }> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/method/supplier_onboarding_status?uhid=${encodeURIComponent(uhid)}`,
+    {
+      method: 'GET',
+      headers: getHeaders(),
+      mode: 'cors',
+      credentials: 'omit',
+    }
+  );
+
+  if (!response.ok) {
+    return { status: 'error' };
+  }
+
+  const result = await response.json();
+  return result.message || { status: 'error' };
+}
+
+/**
+ * Look up supplier name by custom_uhid
+ */
+export async function getSupplierByUhid(uhid: string): Promise<string> {
+  const filters = JSON.stringify([['custom_uhid', '=', uhid]]);
+  const fields = JSON.stringify(['name']);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/resource/Supplier?filters=${encodeURIComponent(filters)}&fields=${encodeURIComponent(fields)}&limit_page_length=1`,
+    {
+      method: 'GET',
+      headers: getHeaders(),
+      mode: 'cors',
+      credentials: 'omit',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to look up supplier by UHID: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  if (!result.data || result.data.length === 0) {
+    throw new Error('Supplier not found for the given ID');
+  }
+
+  return result.data[0].name;
+}
+
+/**
  * Fetch supplier details by name (document name/ID)
  */
 export async function getSupplier(supplierName: string): Promise<SupplierData> {
@@ -393,7 +446,6 @@ export async function linkSupplierPortalUser(
         (pu: { user: string }) => pu.user === email
       );
       if (alreadyLinked) {
-        console.log('Portal user already linked:', email);
         return;
       }
     }
@@ -537,8 +589,6 @@ export async function updateMSMEDetails(
   }
 
   // Create new entries
-  console.log('Creating MSME Details entries:', msmeDetails);
-  
   for (const detail of msmeDetails) {
     if (detail.classification_year && detail.enterprise_type) {
       const payload = {
@@ -554,8 +604,6 @@ export async function updateMSMEDetails(
         date_of_commencement: detail.classification_date || '',
       };
 
-      console.log('MSME Details payload:', payload);
-
       const response = await fetch(`${API_BASE_URL}/api/resource/MSME Details`, {
         method: 'POST',
         headers: getHeaders(),
@@ -567,8 +615,7 @@ export async function updateMSMEDetails(
         console.error(`Failed to create MSME Details entry for ${detail.classification_year}:`, error);
         // Continue with other entries even if one fails
       } else {
-        const result = await response.json();
-        console.log(`Successfully created MSME Details entry for ${detail.classification_year}:`, result);
+        await response.json();
       }
     } else {
       console.warn('Skipping MSME Details entry - missing required fields:', detail);
@@ -1108,10 +1155,6 @@ export async function submitOnboardingData(
 
     // 2. Update supplier main document with all form data
     // Log MSME verification data for debugging
-    if (formData.msmeStatus?.verification_data) {
-      console.log('MSME Verification Data to be posted:', formData.msmeStatus.verification_data);
-    }
-
     const supplierPayload: SupplierUpdatePayload = {
       supplier_name: formData.basicInfo.company_name,
       email_id: formData.basicInfo.email,
@@ -1213,19 +1256,6 @@ export async function submitOnboardingData(
       custom_verification_status: 'Pending for verification',
     };
 
-    // Log the payload to verify MSME fields are included
-    console.log('Supplier Payload with MSME fields:', {
-      custom_msme__udyam_number: supplierPayload.custom_msme__udyam_number,
-      custom_msme_registration_no: supplierPayload.custom_msme_registration_no,
-      custom_msme_type: supplierPayload.custom_msme_type,
-      custom_contract_done: supplierPayload.custom_contract_done,
-      custom_name_of_enterprise: supplierPayload.custom_name_of_enterprise,
-      custom_major_activity: supplierPayload.custom_major_activity,
-      custom_date_of_commencement: supplierPayload.custom_date_of_commencement,
-      custom_organization_of_type: supplierPayload.custom_organization_of_type,
-      custom_address: supplierPayload.custom_address,
-    });
-
     await updateSupplier(supplierName, supplierPayload);
 
     // 3. Ensure portal user link is created for this supplier
@@ -1237,19 +1267,10 @@ export async function submitOnboardingData(
     }
 
     // 4. Update MSME Details child table if MSME verification data exists
-    console.log('Checking MSME verification data for child table:', {
-      hasVerificationData: !!formData.msmeStatus?.verification_data,
-      hasEnterpriseTypeList: !!formData.msmeStatus?.verification_data?.enterprise_type_list,
-      enterpriseTypeListLength: formData.msmeStatus?.verification_data?.enterprise_type_list?.length || 0,
-      enterpriseTypeList: formData.msmeStatus?.verification_data?.enterprise_type_list,
-    });
-
     if (formData.msmeStatus?.verification_data?.enterprise_type_list && 
         formData.msmeStatus.verification_data.enterprise_type_list.length > 0) {
       try {
-        console.log('Calling updateMSMEDetails with:', formData.msmeStatus.verification_data.enterprise_type_list);
         await updateMSMEDetails(supplierName, formData.msmeStatus.verification_data.enterprise_type_list);
-        console.log('Successfully updated MSME Details child table');
       } catch (error) {
         console.error('Failed to update MSME Details:', error);
         // Continue with submission even if child table update fails
@@ -1277,7 +1298,6 @@ export async function submitOnboardingData(
 
     // 3. Create registered address (always created as primary)
     const addressEmail = formData.basicInfo.email;
-    console.log('[createAddress] email used for address:', addressEmail);
     if (!addressEmail) {
       throw new Error('Email is required to create address. Please ensure email is filled in Basic Info.');
     }

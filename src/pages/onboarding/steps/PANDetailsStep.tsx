@@ -9,7 +9,7 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyPAN } from '@/services/surepassApi';
 
 export function PANDetailsStep() {
-  const { formData, updatePANDetails, setPANVerificationStatus, supplierData } = useOnboardingStore();
+  const { formData, updatePANDetails, setPANVerificationStatus, supplierData, supplierId } = useOnboardingStore();
   const { panDetails, basicInfo } = formData;
   const existingPanUrl = supplierData?.custom_pan_img;
   const [isVerifying, setIsVerifying] = useState(false);
@@ -47,30 +47,26 @@ export function PANDetailsStep() {
     try {
       const result = await verifyPAN({
         pan_number: panDetails.pan_number,
+        uhid: supplierId || '',
       });
 
-      console.log('PAN Verification Response:', result);
-
       if (result.success && result.data) {
-        // Auto-fill name and DOB from API response
-        const responseData = result.data.data;
-        if (responseData) {
-          const updates: { full_name?: string; dob?: string } = {};
-          
-          if (responseData.full_name) {
-            updates.full_name = responseData.full_name;
-          }
-          
-          if (responseData.dob) {
-            updates.dob = responseData.dob;
-          }
-          
-          // Update form data with extracted values
-          if (Object.keys(updates).length > 0) {
-            updatePANDetails(updates);
-          }
+        // Auto-fill name and DOB from server response
+        const updates: { full_name?: string; dob?: string } = {};
+
+        if (result.data.full_name) {
+          updates.full_name = result.data.full_name;
         }
-        
+
+        if (result.data.dob) {
+          updates.dob = result.data.dob;
+        }
+
+        // Update form data with extracted values
+        if (Object.keys(updates).length > 0) {
+          updatePANDetails(updates);
+        }
+
         setVerificationStatus('success');
         setVerificationMessage(result.message || 'PAN verified successfully');
         setPANVerificationStatus('success');
@@ -176,7 +172,7 @@ export function PANDetailsStep() {
                 {verificationStatus && !isVerifying && (
                   <>
                     <div
-                      className={`flex items-center gap-2 p-3 rounded-lg ${
+                      className={`flex items-center gap-2 p-3 rounded-lg overflow-hidden ${
                         verificationStatus === 'success'
                           ? 'bg-green-50 text-green-800 border border-green-200'
                           : 'bg-red-50 text-red-800 border border-red-200'
@@ -187,7 +183,7 @@ export function PANDetailsStep() {
                       ) : (
                         <AlertCircle className="w-5 h-5 flex-shrink-0" />
                       )}
-                      <span className="text-sm font-medium">{verificationMessage}</span>
+                      <span className="text-sm font-medium break-words overflow-hidden">{verificationMessage}</span>
                     </div>
 
                   </>

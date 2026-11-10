@@ -1,192 +1,126 @@
 /**
- * SurePass API Service for PAN, GST, Bank Account, and MSME Verification
+ * KYC Verification Service
+ *
+ * All verification calls routed through ERPNext server scripts.
+ * SurePass is called server-side only — tokens and raw responses never reach the browser.
  */
 
-const SUREPASS_BASE_URL = import.meta.env.VITE_SUREPASS_BASE_URL || '';
-const SUREPASS_AUTH_TOKEN = import.meta.env.VITE_SUREPASS_AUTH_TOKEN || '';
+const RAW_API_URL = import.meta.env.VITE_ERPNEXT_API_URL || '';
+const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+const API_KEY = import.meta.env.VITE_ERPNEXT_API_KEY || '';
+const API_SECRET = import.meta.env.VITE_ERPNEXT_API_SECRET || '';
+
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+  if (API_KEY && API_SECRET) {
+    headers['Authorization'] = `token ${API_KEY}:${API_SECRET}`;
+  }
+  return headers;
+}
+
+async function callServerMethod<T>(method: string, params: Record<string, string>): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}/api/method/${method}`, {
+    method: 'POST',
+    headers: {
+      ...getHeaders(),
+      'X-Frappe-CSRF-Token': 'token',
+    },
+    mode: 'cors',
+    credentials: 'omit',
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Verification failed. Please try again.';
+    try {
+      const errorData = await response.json();
+      if (errorData._server_messages) {
+        const parsed = JSON.parse(errorData._server_messages);
+        const msg = typeof parsed[0] === 'string' ? JSON.parse(parsed[0])?.message : parsed[0];
+        if (msg) errorMessage = msg;
+      } else if (errorData.message && !errorData.message.includes('exc_id')) {
+        errorMessage = errorData.message;
+      }
+    } catch {
+      // use default error message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const result = await response.json();
+  return result.message as T;
+}
+
+// --- PAN Verification ---
 
 interface PANVerifyRequest {
   pan_number: string;
-}
-
-interface PANComprehensiveResponse {
-  success: boolean;
-  message?: string;
-  data?: {
-    data?: {
-      client_id?: string;
-      pan_number?: string;
-      full_name?: string;
-      full_name_split?: string[];
-      masked_aadhaar?: string;
-      address?: {
-        line_1?: string;
-        line_2?: string;
-        street_name?: string;
-        zip?: string;
-        city?: string;
-        state?: string;
-        country?: string;
-        full?: string;
-      };
-      email?: string | null;
-      phone_number?: string | null;
-      gender?: string;
-      dob?: string;
-      input_dob?: string | null;
-      aadhaar_linked?: boolean;
-      dob_verified?: boolean;
-      dob_check?: boolean;
-      category?: string;
-      status?: string;
-      less_info?: boolean;
-      [key: string]: unknown;
-    };
-    status_code?: number;
-    success?: boolean;
-    message?: string;
-    message_code?: string;
-  };
+  uhid: string;
 }
 
 interface PANVerifyResponse {
   success: boolean;
   message?: string;
-  data?: PANComprehensiveResponse['data'];
+  data?: {
+    full_name?: string;
+    dob?: string;
+    status?: string;
+    category?: string;
+  };
 }
 
-/**
- * Verify PAN details using SurePass Comprehensive PAN API
- */
 export async function verifyPAN(data: PANVerifyRequest): Promise<PANVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/pan/pan-comprehensive`;
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
-      },
-      body: JSON.stringify({
-        id_number: data.pan_number.toUpperCase().trim(),
-        get_address: true,
-      }),
+    const result = await callServerMethod<PANVerifyResponse & Record<string, unknown>>('verify_pan', {
+      pan_number: data.pan_number.toUpperCase().trim(),
+      uhid: data.uhid,
     });
-
-    if (response.status === 200) {
-      const responseData = await response.json().catch(() => ({}));
-      return {
-        success: true,
-        message: 'PAN verified successfully',
-        data: responseData,
-      };
+    // Normalize: server script may return { success, data } or flat { full_name, dob, ... }
+    if (result.success !== undefined) return result as PANVerifyResponse;
+    if (result.full_name || result.dob) {
+      return { success: true, data: { full_name: result.full_name as string, dob: result.dob as string, status: result.status as string, category: result.category as string } };
     }
-
-    let errorMessage = 'PAN verification failed';
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } catch {
-      errorMessage = `PAN verification failed: ${response.statusText}`;
-    }
-
-    return {
-      success: false,
-      message: errorMessage,
-    };
+    return result as PANVerifyResponse;
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to verify PAN. Please try again.'
+      message: error instanceof Error ? error.message : 'Failed to verify PAN. Please try again.',
     };
   }
 }
 
+// --- GST Verification ---
+
 interface GSTVerifyRequest {
   gstin: string;
+  uhid: string;
 }
 
 interface GSTVerifyResponse {
   success: boolean;
   message?: string;
   data?: {
-    data?: {
-      gstin?: string;
-      business_name?: string;
-      legal_name?: string;
-      gstin_status?: string;
-      [key: string]: unknown;
-    };
-    status_code?: number;
-    success?: boolean;
-    message?: string;
-    message_code?: string;
+    gstin?: string;
+    business_name?: string;
+    legal_name?: string;
+    gstin_status?: string;
   };
 }
 
-/**
- * Verify GSTIN using SurePass API
- */
 export async function verifyGST(data: GSTVerifyRequest): Promise<GSTVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/corporate/gstin`;
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
-      },
-      body: JSON.stringify({
-        id_number: data.gstin.toUpperCase().trim(),
-      }),
+    const result = await callServerMethod<GSTVerifyResponse & Record<string, unknown>>('verify_gst', {
+      gstin: data.gstin.toUpperCase().trim(),
+      uhid: data.uhid,
     });
-
-    const responseData = await response.json().catch(() => ({}));
-
-    if (response.status === 200 && responseData.status_code === 200 && responseData.success === true) {
-      return {
-        success: true,
-        message: 'GST verified successfully',
-        data: responseData,
-      };
+    if (result.success !== undefined) return result as GSTVerifyResponse;
+    if (result.gstin || result.business_name) {
+      return { success: true, data: { gstin: result.gstin as string, business_name: result.business_name as string, legal_name: result.legal_name as string, gstin_status: result.gstin_status as string } };
     }
-
-    let errorMessage = 'GST verification failed';
-    if (responseData.message) {
-      errorMessage = responseData.message;
-    } else if (responseData.error) {
-      errorMessage = responseData.error;
-    } else if (!response.ok) {
-      errorMessage = `GST verification failed: ${response.statusText}`;
-    }
-
-    return {
-      success: false,
-      message: errorMessage,
-      data: responseData,
-    };
+    return result as GSTVerifyResponse;
   } catch (error) {
     return {
       success: false,
@@ -195,83 +129,38 @@ export async function verifyGST(data: GSTVerifyRequest): Promise<GSTVerifyRespon
   }
 }
 
+// --- Bank Account Verification ---
+
 interface BankAccountVerifyRequest {
   account_number: string;
   ifsc_code: string;
+  uhid: string;
 }
 
 interface BankAccountVerifyResponse {
   success: boolean;
   message?: string;
   data?: {
-    status_code?: number;
-    success?: boolean;
-    message?: string;
-    data?: {
-      ifsc_details?: {
-        micr?: string;
-        [key: string]: unknown;
-      };
-      [key: string]: unknown;
-    };
-    [key: string]: unknown;
+    account_holder_name?: string;
+    bank_name?: string;
+    branch_name?: string;
+    micr?: string;
+    account_exists?: boolean;
   };
 }
 
-/**
- * Verify Bank Account using SurePass API
- */
 export async function verifyBankAccount(data: BankAccountVerifyRequest): Promise<BankAccountVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/bank-verification/`;
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
-      },
-      body: JSON.stringify({
-        id_number: data.account_number.trim(),
-        ifsc: data.ifsc_code.toUpperCase().trim(),
-        ifsc_details: true,
-      }),
+    const result = await callServerMethod<BankAccountVerifyResponse & Record<string, unknown>>('verify_bank_account', {
+      account_number: data.account_number.trim(),
+      ifsc_code: data.ifsc_code.toUpperCase().trim(),
+      uhid: data.uhid,
     });
-
-    const responseData = await response.json().catch(() => ({}));
-
-    if (response.status === 200) {
-      return {
-        success: true,
-        message: 'Bank account verified successfully',
-        data: responseData,
-      };
+    if (result.success !== undefined) return result as BankAccountVerifyResponse;
+    if (result.account_holder_name || result.bank_name) {
+      return { success: true, data: { account_holder_name: result.account_holder_name as string, bank_name: result.bank_name as string, branch_name: result.branch_name as string, micr: result.micr as string, account_exists: result.account_exists as boolean } };
     }
-
-    let errorMessage = 'Bank account verification failed';
-    if (responseData.message) {
-      errorMessage = responseData.message;
-    } else if (responseData.error) {
-      errorMessage = responseData.error;
-    } else if (!response.ok) {
-      errorMessage = `Bank account verification failed: ${response.statusText}`;
-    }
-
-    return {
-      success: false,
-      message: errorMessage,
-      data: responseData,
-    };
+    return result as BankAccountVerifyResponse;
   } catch (error) {
     return {
       success: false,
@@ -280,110 +169,45 @@ export async function verifyBankAccount(data: BankAccountVerifyRequest): Promise
   }
 }
 
+// --- MSME Verification ---
+
 interface MSMEVerifyRequest {
   uan: string;
+  uhid: string;
 }
 
 interface MSMEVerifyResponse {
   success: boolean;
   message?: string;
   data?: {
-    data?: {
-      uan?: string;
-      main_details?: {
-        name_of_enterprise?: string;
-        major_activity?: string;
-        date_of_commencement?: string;
-        organization_type?: string;
-        flat?: string;
-        name_of_building?: string;
-        road?: string;
-        village?: string;
-        block?: string;
-        city?: string;
-        state?: string;
-        pin?: string;
-        enterprise_type_list?: Array<{
-          classification_year?: string;
-          enterprise_type?: string;
-          classification_date?: string;
-        }>;
-        [key: string]: unknown;
-      };
-      [key: string]: unknown;
-    };
-    status_code?: number;
-    success?: boolean;
-    message?: string;
-    message_code?: string;
+    name_of_enterprise?: string;
+    major_activity?: string;
+    date_of_commencement?: string;
+    organization_type?: string;
+    address?: string;
+    enterprise_type_list?: Array<{
+      classification_year?: string;
+      enterprise_type?: string;
+      classification_date?: string;
+    }>;
   };
 }
 
-/**
- * Verify MSME/Udyam Registration Number using SurePass API
- */
 export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyResponse> {
-  if (!SUREPASS_BASE_URL) {
-    throw new Error('VITE_SUREPASS_BASE_URL is not configured');
-  }
-
-  if (!SUREPASS_AUTH_TOKEN) {
-    throw new Error('VITE_SUREPASS_AUTH_TOKEN is not configured');
-  }
-
-  const baseUrl = SUREPASS_BASE_URL.replace(/\/+$/, '');
-  const url = `${baseUrl}/api/v1/corporate/udyog-aadhaar`;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${SUREPASS_AUTH_TOKEN}`,
-      },
-      body: JSON.stringify({
-        id_number: data.uan.toUpperCase().trim(),
-      }),
-      signal: controller.signal,
+    const result = await callServerMethod<MSMEVerifyResponse & Record<string, unknown>>('verify_msme', {
+      uan: data.uan.toUpperCase().trim(),
+      uhid: data.uhid,
     });
-
-    clearTimeout(timeoutId);
-
-    const responseData = await response.json().catch(() => ({}));
-
-    if (response.status === 200 && responseData.status_code === 200 && responseData.success === true) {
-      return {
-        success: true,
-        message: 'MSME verified successfully',
-        data: responseData,
-      };
+    if (result.success !== undefined) return result as MSMEVerifyResponse;
+    if (result.name_of_enterprise) {
+      return { success: true, data: result as MSMEVerifyResponse['data'] };
     }
-
-    let errorMessage = 'MSME verification failed';
-    if (responseData.message) {
-      errorMessage = responseData.message;
-    } else if (responseData.error) {
-      errorMessage = responseData.error;
-    } else if (!response.ok) {
-      errorMessage = `MSME verification failed: ${response.statusText}`;
-    }
-
-    return {
-      success: false,
-      message: errorMessage,
-      data: responseData,
-    };
+    return result as MSMEVerifyResponse;
   } catch (error) {
-    clearTimeout(timeoutId);
-
     if (error instanceof Error) {
       if (error.name === 'AbortError' ||
           error.message.includes('timeout') ||
-          error.message.includes('aborted') ||
           error.message.includes('Failed to fetch') ||
           error.message.includes('network')) {
         return {
@@ -392,7 +216,6 @@ export async function verifyMSME(data: MSMEVerifyRequest): Promise<MSMEVerifyRes
         };
       }
     }
-
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Failed to verify MSME. Please try again.',

@@ -5,7 +5,7 @@ import { SignupPage } from '@/pages/auth/signup';
 function App() {
   // Check if user has already signed up (stored in localStorage)
   const urlParams = new URLSearchParams(window.location.search);
-  const supplierId = urlParams.get('supplier');
+  const supplierId = urlParams.get('uhid');
   
   // Default to showing signup page first (hasSignedUp = false)
   // Only set to true if localStorage indicates user has already completed signup

@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { CheckCircle2, Download, Loader2 } from 'lucide-react';
+import { CheckCircle2, Download, Loader2, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { generateSupplierAgreementPDF } from '@/utils/generatePDF';
 
 export function ThankYouPage() {
-  const { formData, supplierId } = useOnboardingStore();
+  const { formData, supplierId, supplierData } = useOnboardingStore();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const isVerified = supplierData?.custom_verification_status === 'Verified';
 
   const handleDownloadPDF = async () => {
     if (!supplierId) {
@@ -34,54 +36,83 @@ export function ThankYouPage() {
       <Card className="max-w-2xl w-full">
         <CardContent className="pt-12 pb-12 px-8">
           <div className="flex flex-col items-center text-center gap-6">
-            {/* Success Icon */}
-            <div className="w-24 h-24 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-16 h-16 text-green-600" />
+            {/* Icon */}
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
+              isVerified
+                ? 'bg-blue-100 dark:bg-blue-900/30'
+                : 'bg-green-100 dark:bg-green-900/30'
+            }`}>
+              {isVerified ? (
+                <ShieldCheck className="w-16 h-16 text-blue-600" />
+              ) : (
+                <CheckCircle2 className="w-16 h-16 text-green-600" />
+              )}
             </div>
 
             {/* Title */}
             <div className="flex flex-col gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">Thank You!</h1>
-              <p className="text-lg text-muted-foreground">
-                Your onboarding application has been submitted successfully
-              </p>
+              {isVerified ? (
+                <>
+                  <h1 className="text-3xl font-bold tracking-tight">Already Submitted</h1>
+                  <p className="text-lg text-muted-foreground">
+                    Your vendor onboarding application has already been submitted
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-bold tracking-tight">Thank You!</h1>
+                  <p className="text-lg text-muted-foreground">
+                    Your onboarding application has been submitted successfully
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Message */}
             <div className="flex flex-col gap-3 max-w-md">
-              <p className="text-muted-foreground">
-                Our team will review your documents and get back to you within 3-5 business days, if any changes are required.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                You can download a copy of your supplier agreement below.
-              </p>
-            </div>
-
-            {/* Download Button */}
-            <div className="flex flex-col gap-3 w-full max-w-sm mt-4">
-              <Button
-                onClick={handleDownloadPDF}
-                disabled={isDownloading}
-                size="lg"
-                className="w-full gap-2"
-              >
-                {isDownloading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating PDF...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5" />
-                    Download Supplier Agreement PDF
-                  </>
-                )}
-              </Button>
-
-              {downloadError && (
-                <p className="text-sm text-destructive text-center">{downloadError}</p>
+              {isVerified ? (
+                <p className="text-muted-foreground">
+                  Your documents have been submitted and are being reviewed by our team. No further action is required from your end.
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    Our team will review your documents and get back to you within 3-5 business days, if any changes are required.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    You can download a copy of your supplier agreement below.
+                  </p>
+                </>
               )}
             </div>
+
+            {/* Download Button - only show for fresh submissions */}
+            {!isVerified && (
+              <div className="flex flex-col gap-3 w-full max-w-sm mt-4">
+                <Button
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloading}
+                  size="lg"
+                  className="w-full gap-2"
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-5 h-5" />
+                      Download Supplier Agreement PDF
+                    </>
+                  )}
+                </Button>
+
+                {downloadError && (
+                  <p className="text-sm text-destructive text-center">{downloadError}</p>
+                )}
+              </div>
+            )}
 
             {/* Additional Info */}
             <div className="mt-6 pt-6 border-t w-full">
@@ -96,4 +127,3 @@ export function ThankYouPage() {
     </div>
   );
 }
-

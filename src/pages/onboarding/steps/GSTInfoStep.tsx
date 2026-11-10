@@ -10,7 +10,7 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyGST } from '@/services/surepassApi';
 
 export function GSTInfoStep() {
-  const { formData, updateGSTInfo, setGSTVerificationStatus, supplierData } = useOnboardingStore();
+  const { formData, updateGSTInfo, setGSTVerificationStatus, supplierData, supplierId } = useOnboardingStore();
   const { gstInfo } = formData;
   const existingGstUrl = supplierData?.custom_gst_img;
   const [isVerifying, setIsVerifying] = useState(false);
@@ -64,20 +64,15 @@ export function GSTInfoStep() {
     try {
       const result = await verifyGST({
         gstin: gstInfo.gst_number,
+        uhid: supplierId || '',
       });
 
-      if (result.success && result.data?.data) {
-        const gstData = result.data.data as {
+      if (result.success && result.data) {
+        setVerificationData(result.data as {
           business_name?: string;
           legal_name?: string;
-          date_of_registration?: string;
-          taxpayer_type?: string;
           gstin_status?: string;
-          address?: string;
-          constitution_of_business?: string;
-        };
-        
-        setVerificationData(gstData);
+        });
         setVerificationStatus('success');
         setVerificationMessage(result.message || 'GST verified successfully');
         setGSTVerificationStatus('success');
@@ -182,7 +177,7 @@ export function GSTInfoStep() {
 
                     {verificationStatus && !isVerifying && (
                       <div
-                        className={`flex items-center gap-2 p-3 rounded-lg ${
+                        className={`flex items-center gap-2 p-3 rounded-lg overflow-hidden ${
                           verificationStatus === 'success'
                             ? 'bg-green-50 text-green-800 border border-green-200'
                             : 'bg-red-50 text-red-800 border border-red-200'
@@ -193,7 +188,7 @@ export function GSTInfoStep() {
                         ) : (
                           <AlertCircle className="w-5 h-5 flex-shrink-0" />
                         )}
-                        <span className="text-sm font-medium">{verificationMessage}</span>
+                        <span className="text-sm font-medium break-words overflow-hidden">{verificationMessage}</span>
                       </div>
                     )}
                   </div>

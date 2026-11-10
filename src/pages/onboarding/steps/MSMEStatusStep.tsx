@@ -17,7 +17,7 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { verifyMSME } from '@/services/surepassApi';
 
 export function MSMEStatusStep() {
-  const { formData, updateMSMEStatus, setMSMEVerificationStatus, supplierData } = useOnboardingStore();
+  const { formData, updateMSMEStatus, setMSMEVerificationStatus, supplierData, supplierId } = useOnboardingStore();
   const { msmeStatus } = formData;
   const existingMsmeUrl = supplierData?.custom_msme_certificate_;
   const [isVerifying, setIsVerifying] = useState(false);
@@ -49,52 +49,21 @@ export function MSMEStatusStep() {
     try {
       const result = await verifyMSME({
         uan: msmeStatus.msme_number,
+        uhid: supplierId || '',
       });
 
-      console.log('MSME Verification Response:', result);
-
       if (result.success && result.data) {
-        // Handle the response structure: result.data contains the API response
-        // The API response has: { data: { main_details: {...}, enterprise_type_list: [...] }, status_code, success, ... }
-        const apiResponse = result.data;
-        const responseData = apiResponse.data;
-        const mainDetails = responseData?.main_details;
+        // Server script returns flattened, filtered data
+        const data = result.data;
 
-        if (mainDetails) {
-          // Construct address from available fields
-          const addressParts: string[] = [];
-          if (mainDetails.flat) addressParts.push(mainDetails.flat);
-          if (mainDetails.name_of_building) addressParts.push(mainDetails.name_of_building);
-          if (mainDetails.road) addressParts.push(mainDetails.road);
-          if (mainDetails.village) addressParts.push(mainDetails.village);
-          if (mainDetails.block) addressParts.push(mainDetails.block);
-          if (mainDetails.city) addressParts.push(mainDetails.city);
-          if (mainDetails.state) addressParts.push(mainDetails.state);
-          if (mainDetails.pin) addressParts.push(mainDetails.pin);
-          const address = addressParts.join(', ');
-
-          // Extract enterprise_type_list - check both main_details and root data level
-          let enterpriseTypeList: Array<{
-            classification_year?: string;
-            enterprise_type?: string;
-            classification_date?: string;
-          }> = [];
-          
-          if (mainDetails.enterprise_type_list && Array.isArray(mainDetails.enterprise_type_list)) {
-            enterpriseTypeList = mainDetails.enterprise_type_list;
-          } else if (responseData?.enterprise_type_list && Array.isArray(responseData.enterprise_type_list)) {
-            enterpriseTypeList = responseData.enterprise_type_list;
-          }
-
-          console.log('Extracted enterprise_type_list:', enterpriseTypeList);
-
+        if (data.name_of_enterprise) {
           const verificationData = {
-            name_of_enterprise: mainDetails.name_of_enterprise || '',
-            major_activity: mainDetails.major_activity || '',
-            date_of_commencement: mainDetails.date_of_commencement || '',
-            organization_type: mainDetails.organization_type || '',
-            address: address || '',
-            enterprise_type_list: enterpriseTypeList.map((item: {
+            name_of_enterprise: data.name_of_enterprise || '',
+            major_activity: data.major_activity || '',
+            date_of_commencement: data.date_of_commencement || '',
+            organization_type: data.organization_type || '',
+            address: data.address || '',
+            enterprise_type_list: (data.enterprise_type_list || []).map((item: {
               classification_year?: string;
               enterprise_type?: string;
               classification_date?: string;
@@ -105,9 +74,6 @@ export function MSMEStatusStep() {
             })),
           };
 
-          console.log('Storing MSME Verification Data:', verificationData);
-          console.log('Enterprise Type List Count:', verificationData.enterprise_type_list.length);
-
           // Store verification data in the store
           updateMSMEStatus({
             verification_data: verificationData,
@@ -117,7 +83,6 @@ export function MSMEStatusStep() {
           setVerificationMessage(result.message || 'MSME verified successfully');
           setMSMEVerificationStatus('success');
         } else {
-          console.error('MSME verification response missing main_details');
           setVerificationStatus('error');
           setVerificationMessage('MSME verification failed: Invalid response structure');
           setMSMEVerificationStatus('error');
@@ -265,7 +230,7 @@ export function MSMEStatusStep() {
 
                     {verificationStatus && !isVerifying && (
                       <div
-                        className={`flex items-center gap-2 p-3 rounded-lg ${
+                        className={`flex items-center gap-2 p-3 rounded-lg overflow-hidden ${
                           verificationStatus === 'success'
                             ? 'bg-green-50 text-green-800 border border-green-200'
                             : 'bg-red-50 text-red-800 border border-red-200'
@@ -276,7 +241,7 @@ export function MSMEStatusStep() {
                         ) : (
                           <AlertCircle className="w-5 h-5 flex-shrink-0" />
                         )}
-                        <span className="text-sm font-medium">{verificationMessage}</span>
+                        <span className="text-sm font-medium break-words overflow-hidden">{verificationMessage}</span>
                       </div>
                     )}
                   </div>

@@ -13,7 +13,9 @@ import type {
   SupplierApiData,
 } from '@/types/onboarding';
 import { INITIAL_FORM_DATA } from '@/types/onboarding';
-import { getSupplier, getSupplierAddresses, submitOnboardingData } from '@/services/erpnextApi';
+import { getSupplier, getSupplierByUhid, getSupplierAddresses, submitOnboardingData, checkOnboardingStatus } from '@/services/erpnextApi';
+import type { OnboardingStatus } from '@/services/erpnextApi';
+import { encryptData, decryptData } from '@/utils/crypto';
 
 // LocalStorage key for caching
 const STORAGE_KEY = 'vendor-onboarding-cache';
@@ -235,12 +237,25 @@ function migrateCachedData(data: Partial<OnboardingFormData> | null): Partial<On
 }
 
 // Helper to load from localStorage and restore File objects
-function loadFromCache(supplierId: string | null): Partial<OnboardingFormData> | null {
+async function loadFromCache(supplierId: string | null): Promise<Partial<OnboardingFormData> | null> {
   if (!supplierId) return null;
-  
+
   try {
-    const cached = localStorage.getItem(`${STORAGE_KEY}-${supplierId}`);
-    if (cached) {
+    const encrypted = localStorage.getItem(`${STORAGE_KEY}-${supplierId}`);
+    if (encrypted) {
+      let cached: string;
+      try {
+        cached = await decryptData(encrypted);
+      } catch {
+        // Fallback: try reading as unencrypted (old format) and re-encrypt
+        try {
+          JSON.parse(encrypted);
+          cached = encrypted;
+        } catch {
+          localStorage.removeItem(`${STORAGE_KEY}-${supplierId}`);
+          return null;
+        }
+      }
       const parsed = JSON.parse(cached);
       const fileData = parsed._fileData;
       
@@ -338,14 +353,15 @@ function loadFromCache(supplierId: string | null): Partial<OnboardingFormData> |
   return null;
 }
 
-// Helper to save to localStorage (async, fire-and-forget)
+// Helper to save to localStorage with encryption (async, fire-and-forget)
 function saveToCache(supplierId: string | null, formData: OnboardingFormData): void {
   if (!supplierId) return;
-  
+
   // Fire and forget - don't block UI
   serializeFormData(formData)
-    .then((serialized) => {
-      localStorage.setItem(`${STORAGE_KEY}-${supplierId}`, JSON.stringify(serialized));
+    .then((serialized) => encryptData(JSON.stringify(serialized)))
+    .then((encrypted) => {
+      localStorage.setItem(`${STORAGE_KEY}-${supplierId}`, encrypted);
     })
     .catch((error) => {
       console.warn('Failed to save to cache:', error);
@@ -371,7 +387,9 @@ interface OnboardingStore {
   isSubmitting: boolean;
   error: string | null;
   supplierId: string | null;
+  supplierName: string | null;
   supplierData: SupplierApiData | null;
+  linkStatus: OnboardingStatus | 'loading' | null;
   panVerificationStatus: 'success' | 'error' | 'pending' | null;
   gstVerificationStatus: 'success' | 'error' | 'pending' | null;
   bankVerificationStatus: 'success' | 'error' | 'pending' | null;
@@ -415,7 +433,9 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   isSubmitting: false,
   error: null,
   supplierId: null,
+  supplierName: null,
   supplierData: null,
+  linkStatus: null,
   panVerificationStatus: null,
   gstVerificationStatus: null,
   bankVerificationStatus: null,
@@ -569,51 +589,46 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
 
   initializeFromUrl: async () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const supplierId = urlParams.get('supplier');
+    const uhid = urlParams.get('uhid');
 
-    if (!supplierId) {
+    if (!uhid) {
       set({ error: 'No supplier ID provided. Please use the link sent to your email.' });
       return;
     }
 
     // Skip if already initialized with same supplier (avoid double fetch)
     const currentState = get();
-    if (currentState.supplierData && currentState.supplierId === supplierId && !currentState.isLoading) {
-      console.log('[initializeFromUrl] Already initialized for supplier:', supplierId);
+    if (currentState.supplierData && currentState.supplierId === uhid && !currentState.isLoading) {
       return;
     }
 
-    set({ isLoading: true, error: null, supplierId });
+    set({ isLoading: true, error: null, supplierId: uhid, linkStatus: 'loading' });
 
     try {
+      // Step 1: Check link status server-side (expiry, completed, invalid)
+      const statusResult = await checkOnboardingStatus(uhid);
+
+      if (statusResult.status !== 'valid') {
+        set({ linkStatus: statusResult.status, isLoading: false });
+        return;
+      }
+
+      // Step 2: Resolve UHID to actual supplier name
+      const supplierName = await getSupplierByUhid(uhid);
+
       // Fetch supplier data and addresses in parallel
       const [supplierData, addresses] = await Promise.all([
-        getSupplier(supplierId),
-        getSupplierAddresses(supplierId),
+        getSupplier(supplierName),
+        getSupplierAddresses(supplierName),
       ]);
+
+      // Store resolved supplier name
+      set({ supplierName, linkStatus: 'valid' });
 
       // Extract primary and billing addresses
       const primaryAddress = addresses.find(a => a.is_primary_address === 1) || addresses[0];
       const billingAddress = addresses.find(a => a.address_type === 'Billing' && a.is_primary_address !== 1);
 
-      console.log('[initializeFromUrl] Addresses from ERPNext:', addresses);
-
-      // Debug: log full supplier data from ERPNext
-      console.log('[initializeFromUrl] Full supplier data from ERPNext:', JSON.stringify(supplierData, null, 2));
-      console.log('[initializeFromUrl] Key custom fields:', {
-        custom_business_type: supplierData.custom_business_type,
-        custom_transaction_contact_name: supplierData.custom_transaction_contact_name,
-        custom_drug_license_no: supplierData.custom_drug_license_no,
-        custom_msme__udyam_number: (supplierData.custom_msme__udyam_number || supplierData.custom_msme_registration_no),
-        custom_discount_: supplierData.custom_discount_,
-        custom_pan_img: supplierData.custom_pan_img,
-        custom_gst_img: supplierData.custom_gst_img,
-        custom_bank_account_details: supplierData.custom_bank_account_details,
-        custom_invoice_discount_type: supplierData.custom_invoice_discount_type,
-        custom_invoice_discount_: supplierData.custom_invoice_discount_,
-        custom_manufacturers_authorized_distributor: supplierData.custom_manufacturers_authorized_distributor,
-        custom_return_policy__damage: supplierData.custom_return_policy__damage,
-      });
 
       // Pre-fill form with existing supplier data
       const gstStatus: 'registered' | 'not_registered' | '' =
@@ -625,7 +640,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
             : '';
 
       // Load cached data if available
-      const cachedData = loadFromCache(supplierId);
+      const cachedData = await loadFromCache(uhid);
 
       // Extract bank account from child table (first entry)
       const bankEntry = supplierData.custom_bank_account_details?.[0];
@@ -770,18 +785,6 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         signatureData: cachedData?.signatureData || '',
       };
 
-      // Debug: log merged form data
-      console.log('[initializeFromUrl] Merged form data:', {
-        basicInfo: mergedFormData.basicInfo,
-        contactInformation: mergedFormData.contactInformation,
-        panDetails: { pan_number: mergedFormData.panDetails.pan_number, full_name: mergedFormData.panDetails.full_name },
-        gstInfo: { gst_status: mergedFormData.gstInfo.gst_status, gst_number: mergedFormData.gstInfo.gst_number },
-        bankAccount: mergedFormData.bankAccount,
-        msmeStatus: { msme_status: mergedFormData.msmeStatus.msme_status, msme_number: mergedFormData.msmeStatus.msme_number },
-        drugLicense: { drug_license_status: mergedFormData.drugLicense.drug_license_status, drug_license_number: mergedFormData.drugLicense.drug_license_number },
-        commercialDetails: mergedFormData.commercialDetails,
-      });
-
       set({
         supplierData,
         formData: mergedFormData,
@@ -789,7 +792,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
       });
 
       // Save merged data to cache
-      saveToCache(supplierId, mergedFormData);
+      saveToCache(uhid, mergedFormData);
     } catch (error) {
       set({
         isLoading: false,
@@ -799,16 +802,25 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   },
 
   submitForm: async () => {
-    const { supplierId, formData } = get();
+    const { supplierName, supplierId, formData } = get();
 
-    if (!supplierId) {
+    if (!supplierName) {
       return { success: false, message: 'No supplier ID found' };
     }
 
     set({ isSubmitting: true, error: null });
 
     try {
-      const result = await submitOnboardingData(supplierId, {
+      // Re-check link status before submit (prevents expired link submission)
+      if (supplierId) {
+        const statusCheck = await checkOnboardingStatus(supplierId);
+        if (statusCheck.status !== 'valid') {
+          set({ linkStatus: statusCheck.status, isSubmitting: false });
+          return { success: false, message: 'Link has expired. Please request a new link.' };
+        }
+      }
+
+      const result = await submitOnboardingData(supplierName, {
         basicInfo: formData.basicInfo,
         panDetails: formData.panDetails,
         gstInfo: formData.gstInfo,

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Clock, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { message } from 'antd';
 import { Card, CardContent } from '@/components/ui/card';
 import { Stepper } from '@/components/ui/onboarding/Stepper';
@@ -32,6 +32,7 @@ export function OnboardingPage() {
     error,
     supplierId,
     supplierData,
+    linkStatus,
   } = useOnboardingStore();
 
   // Initialize from URL params on mount
@@ -144,22 +145,131 @@ export function OnboardingPage() {
     );
   }
 
-  // Error state (no supplier ID or API error)
-  if (error && !supplierId) {
+  // Link expired (server-side 24hr check)
+  if (linkStatus === 'expired') {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <Card className="max-w-md w-full mx-4">
-          <CardContent className="pt-6 flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <AlertCircle className="w-8 h-8 text-red-600" />
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4">
+        <Card className="max-w-2xl w-full">
+          <CardContent className="pt-12 pb-12 px-8">
+            <div className="flex flex-col items-center text-center gap-6">
+              <div className="w-24 h-24 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+                <Clock className="w-16 h-16 text-amber-600" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h1 className="text-3xl font-bold tracking-tight">This link has expired</h1>
+                <p className="text-lg text-muted-foreground">
+                  For security, onboarding links are valid for 24 hours.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 max-w-md">
+                <p className="text-muted-foreground">
+                  Please contact the Geri Care Purchase Team to get a new link.
+                </p>
+              </div>
+              <div className="mt-6 pt-6 border-t w-full">
+                <p className="text-sm text-muted-foreground">
+                  Email:{' '}
+                  <a href="mailto:purchasemanager@gericare.in" className="text-primary underline font-medium">purchasemanager@gericare.in</a>
+                </p>
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-center">Invalid Link</h2>
-            <p className="text-muted-foreground text-center">
-              {error}
-            </p>
-            <p className="text-sm text-muted-foreground text-center">
-              Please contact your administrator or use the link sent to your email.
-            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Already completed
+  if (linkStatus === 'completed') {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4">
+        <Card className="max-w-2xl w-full">
+          <CardContent className="pt-12 pb-12 px-8">
+            <div className="flex flex-col items-center text-center gap-6">
+              <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                <ShieldCheck className="w-16 h-16 text-blue-600" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h1 className="text-3xl font-bold tracking-tight">Already Submitted</h1>
+                <p className="text-lg text-muted-foreground">
+                  Your vendor onboarding application has already been submitted
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 max-w-md">
+                <p className="text-muted-foreground">
+                  Your documents have been submitted and are being reviewed by our team. No further action is required from your end.
+                </p>
+              </div>
+              <div className="mt-6 pt-6 border-t w-full">
+                <p className="text-sm text-muted-foreground">
+                  If you have any questions, please contact Geri Care Purchase team -{' '}
+                  <a href="mailto:purchasemanager@gericare.in" className="text-primary underline font-medium">purchasemanager@gericare.in</a>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Invalid link
+  if (linkStatus === 'invalid' || (error && !supplierId)) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4">
+        <Card className="max-w-2xl w-full">
+          <CardContent className="pt-12 pb-12 px-8">
+            <div className="flex flex-col items-center text-center gap-6">
+              <div className="w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <ShieldAlert className="w-16 h-16 text-red-600" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h1 className="text-3xl font-bold tracking-tight">Invalid Link</h1>
+                <p className="text-lg text-muted-foreground">
+                  This link is not valid
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 max-w-md">
+                <p className="text-muted-foreground">
+                  Please use the latest link from your email. If you continue to face issues, contact the Geri Care Purchase Team.
+                </p>
+              </div>
+              <div className="mt-6 pt-6 border-t w-full">
+                <p className="text-sm text-muted-foreground">
+                  Email:{' '}
+                  <a href="mailto:purchasemanager@gericare.in" className="text-primary underline font-medium">purchasemanager@gericare.in</a>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Generic error
+  if (linkStatus === 'error' || error) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center py-12 px-4">
+        <Card className="max-w-2xl w-full">
+          <CardContent className="pt-12 pb-12 px-8">
+            <div className="flex flex-col items-center text-center gap-6">
+              <div className="w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-16 h-16 text-red-600" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h1 className="text-3xl font-bold tracking-tight">Something went wrong</h1>
+                <p className="text-lg text-muted-foreground">
+                  Please try again later
+                </p>
+              </div>
+              <div className="mt-6 pt-6 border-t w-full">
+                <p className="text-sm text-muted-foreground">
+                  If the issue persists, contact Geri Care Purchase team -{' '}
+                  <a href="mailto:purchasemanager@gericare.in" className="text-primary underline font-medium">purchasemanager@gericare.in</a>
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
