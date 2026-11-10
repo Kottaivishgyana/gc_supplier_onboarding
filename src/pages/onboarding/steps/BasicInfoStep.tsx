@@ -114,9 +114,13 @@ export function BasicInfoStep() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="Enter contact number"
+                  placeholder="Enter 10 digit mobile number"
                   value={basicInfo.phone}
-                  onChange={(e) => updateBasicInfo({ phone: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    updateBasicInfo({ phone: val });
+                  }}
+                  maxLength={10}
                   className="pr-12 h-14"
                 />
                 <Phone className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
@@ -355,8 +359,8 @@ export function validateBasicInfo(data: {
     message.error({content: 'Please enter a valid email address',key: 'validation-error'});
     return false;
   }
-  if (!data.phone.trim()) {
-    message.error({content: 'Please enter phone number',key: 'validation-error'});
+  if (!data.phone.trim() || data.phone.replace(/\D/g, '').length !== 10) {
+    message.error({content: 'Please enter a valid 10 digit mobile number',key: 'validation-error'});
     return false;
   }
   if (!data.business_type) {
