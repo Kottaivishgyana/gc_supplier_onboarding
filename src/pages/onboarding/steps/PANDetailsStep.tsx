@@ -77,7 +77,14 @@ export function PANDetailsStep() {
       }
     } catch (error) {
       setVerificationStatus('error');
-      setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify PAN. Please try again.');
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('Too many')) {
+        setVerificationMessage(msg);
+      } else if (msg.includes('temporarily unavailable')) {
+        setVerificationMessage(msg);
+      } else {
+        setVerificationMessage('PAN verification failed. Please try again.');
+      }
       setPANVerificationStatus('error');
     } finally {
       setIsVerifying(false);

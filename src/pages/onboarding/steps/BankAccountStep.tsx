@@ -79,7 +79,12 @@ export function BankAccountStep() {
       }
     } catch (error) {
       setVerificationStatus('error');
-      setVerificationMessage(error instanceof Error ? error.message : 'Failed to verify bank account. Please try again.');
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('Too many') || msg.includes('temporarily unavailable')) {
+        setVerificationMessage(msg);
+      } else {
+        setVerificationMessage('Bank verification failed. Please try again.');
+      }
       setBankVerificationStatus('error');
     } finally {
       setIsVerifying(false);

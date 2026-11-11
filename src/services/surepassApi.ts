@@ -21,6 +21,17 @@ async function callServerMethod<T>(method: string, params: Record<string, string
   });
 
   if (!response.ok) {
+    // Rate limit exceeded
+    if (response.status === 429) {
+      throw new Error('Too many attempts. Please wait a minute and try again.');
+    }
+
+    // HTML response (daily limit / service down)
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      throw new Error('Service temporarily unavailable. Please try again later.');
+    }
+
     let errorMessage = 'Verification failed. Please try again.';
     try {
       const errorData = await response.json();

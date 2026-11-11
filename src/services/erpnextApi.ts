@@ -275,8 +275,11 @@ export async function checkOnboardingStatus(uhid: string): Promise<{ status: Onb
     return { status: 'invalid' };
   }
 
+  if (response.status === 429) {
+    return { status: 'error' };
+  }
+
   if (!response.ok) {
-    // Check if HTML response (daily limit page)
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
       return { status: 'error' };
@@ -319,6 +322,13 @@ export async function uploadOnboardingFile(
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('Too many uploads. Please wait a minute and try again.');
+    }
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      throw new Error('Service temporarily unavailable. Please try again later.');
+    }
     throw new Error(`Failed to upload file: ${response.statusText}`);
   }
 
@@ -342,6 +352,13 @@ export async function submitOnboardingViaApp(
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('Too many attempts. Please wait a minute and try again.');
+    }
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      throw new Error('Service temporarily unavailable. Please try again later.');
+    }
     let errorMessage = 'Failed to submit onboarding data';
     try {
       const errorData = await response.json();
@@ -371,6 +388,9 @@ export async function getSupplierDataByUhid(uhid: string): Promise<{ supplier: S
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error('Too many attempts. Please wait a minute and try again.');
+    }
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
       throw new Error('Service temporarily unavailable. Please try again later.');

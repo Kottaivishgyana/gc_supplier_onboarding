@@ -101,18 +101,14 @@ export function MSMEStatusStep() {
       }
     } catch (error) {
       setVerificationStatus('error');
-      
-      // Check for timeout or server busy errors
-      let errorMsg = 'Failed to verify MSME. Please try again.';
+
+      let errorMsg = 'MSME verification failed. Please try again.';
       if (error instanceof Error) {
-        if (error.name === 'AbortError' || 
-            error.message.includes('timeout') || 
-            error.message.includes('aborted') ||
-            error.message.includes('Server busy') ||
-            error.message.includes('Failed to fetch')) {
-          errorMsg = 'Server busy try after sometime';
-        } else {
-          errorMsg = error.message;
+        const msg = error.message;
+        if (msg.includes('Too many') || msg.includes('temporarily unavailable')) {
+          errorMsg = msg;
+        } else if (msg.includes('Server busy') || msg.includes('timeout') || msg.includes('Failed to fetch')) {
+          errorMsg = 'Server busy, try after sometime';
         }
       }
       
