@@ -13,7 +13,7 @@ import type {
   SupplierApiData,
 } from '@/types/onboarding';
 import { INITIAL_FORM_DATA } from '@/types/onboarding';
-import { getSupplier, getSupplierByUhid, getSupplierAddresses, submitOnboardingData, checkOnboardingStatus } from '@/services/erpnextApi';
+import { getSupplierDataByUhid, uploadOnboardingFile, submitOnboardingViaApp, checkOnboardingStatus } from '@/services/erpnextApi';
 import type { OnboardingStatus } from '@/services/erpnextApi';
 import { encryptData, decryptData } from '@/utils/crypto';
 
@@ -588,8 +588,8 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   setError: (error) => set({ error }),
 
   initializeFromUrl: async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const uhid = urlParams.get('uhid');
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    const uhid = (path && !path.includes('/')) ? path : null;
 
     if (!uhid) {
       set({ error: 'No supplier ID provided. Please use the link sent to your email.' });
@@ -613,17 +613,11 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         return;
       }
 
-      // Step 2: Resolve UHID to actual supplier name
-      const supplierName = await getSupplierByUhid(uhid);
-
-      // Fetch supplier data and addresses in parallel
-      const [supplierData, addresses] = await Promise.all([
-        getSupplier(supplierName),
-        getSupplierAddresses(supplierName),
-      ]);
+      // Step 2: Get supplier data + addresses (single call, no auth needed)
+      const { supplier: supplierData, addresses } = await getSupplierDataByUhid(uhid);
 
       // Store resolved supplier name
-      set({ supplierName, linkStatus: 'valid' });
+      set({ supplierName: supplierData.name, linkStatus: 'valid' });
 
       // Extract primary and billing addresses
       const primaryAddress = addresses.find(a => a.is_primary_address === 1) || addresses[0];
@@ -820,19 +814,96 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         }
       }
 
-      const result = await submitOnboardingData(supplierName, {
+      // Upload files first (no auth, via custom app)
+      const fileUrls: Record<string, string> = {};
+
+      const uploadIfExists = async (file: File | null | undefined, fieldName: string) => {
+        if (file && supplierId) {
+          try {
+            const url = await uploadOnboardingFile(supplierId, file, fieldName);
+            if (url) fileUrls[fieldName] = url;
+          } catch { /* continue even if upload fails */ }
+        }
+      };
+
+      await uploadIfExists(formData.panDetails.pan_document, 'pan_document');
+      if (formData.gstInfo.gst_status === 'registered') {
+        await uploadIfExists(formData.gstInfo.gst_document, 'gst_document');
+      }
+      await uploadIfExists(formData.drugLicense?.drug_license_document, 'drug_license_document');
+      await uploadIfExists(formData.msmeStatus?.msme_document, 'msme_document');
+      await uploadIfExists(formData.selfDeclaration?.self_declaration_document, 'self_declaration_document');
+
+      // Upload signature as PNG
+      if (formData.signatureData && supplierId) {
+        try {
+          const base64Data = formData.signatureData.split(',')[1];
+          const byteArray = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+          const blob = new Blob([byteArray], { type: 'image/png' });
+          const signatureFile = new File([blob], `Signature_${Date.now()}.png`, { type: 'image/png' });
+          const url = await uploadOnboardingFile(supplierId, signatureFile, 'signature');
+          if (url) fileUrls.signature = url;
+        } catch { /* continue */ }
+      }
+
+      // Upload authorized distributor documents
+      const authorizedDistributors: Array<{ manufacturer_name: string; document_url: string }> = [];
+      if (formData.commercialDetails?.is_authorized_distributor === 'Yes' && formData.commercialDetails.authorized_distributors) {
+        for (const item of formData.commercialDetails.authorized_distributors) {
+          let docUrl = '';
+          if (item.document && supplierId) {
+            try {
+              docUrl = await uploadOnboardingFile(supplierId, item.document, 'authorized_distributor');
+            } catch { /* continue */ }
+          }
+          authorizedDistributors.push({ manufacturer_name: item.manufacturer_name, document_url: docUrl });
+        }
+      }
+
+      // Generate and upload supplier agreement PDF
+      try {
+        const { generateSupplierAgreementFile } = await import('@/utils/generatePDF');
+        const { INITIAL_FORM_DATA: INIT } = await import('@/types/onboarding');
+        const allFormData = {
+          ...INIT,
+          basicInfo: formData.basicInfo,
+          panDetails: { ...INIT.panDetails, ...formData.panDetails },
+          gstInfo: formData.gstInfo,
+          bankAccount: formData.bankAccount,
+          msmeStatus: formData.msmeStatus || INIT.msmeStatus,
+          drugLicense: formData.drugLicense || INIT.drugLicense,
+          contactInformation: formData.contactInformation || INIT.contactInformation,
+          commercialDetails: formData.commercialDetails || INIT.commercialDetails,
+          selfDeclaration: formData.selfDeclaration || INIT.selfDeclaration,
+          termsAccepted: true,
+          signatureData: formData.signatureData || '',
+        };
+        if (supplierId) {
+          const agreementFile = await generateSupplierAgreementFile(allFormData as OnboardingFormData, supplierId);
+          const agreementUrl = await uploadOnboardingFile(supplierId, agreementFile, 'supplier_agreement');
+          if (agreementUrl) fileUrls.supplier_agreement = agreementUrl;
+        }
+      } catch { /* continue even if PDF fails */ }
+
+      // Submit all data (no auth, via custom app)
+      const result = await submitOnboardingViaApp(supplierId!, {
         basicInfo: formData.basicInfo,
-        panDetails: formData.panDetails,
+        panDetails: { pan_number: formData.panDetails.pan_number },
         gstInfo: formData.gstInfo,
         bankAccount: formData.bankAccount,
         drugLicense: formData.drugLicense,
         msmeStatus: formData.msmeStatus,
         contactInformation: formData.contactInformation,
-        commercialDetails: formData.commercialDetails,
-        selfDeclaration: formData.selfDeclaration,
-        signatureData: formData.signatureData,
-        signatureTimestamp: formData.signatureTimestamp,
-        signaturePlace: formData.signaturePlace,
+        commercialDetails: {
+          ...formData.commercialDetails,
+          authorized_distributors: undefined,
+        },
+        authorizedDistributors,
+        fileUrls,
+        signatureData: {
+          timestamp: formData.signatureTimestamp ? new Date(formData.signatureTimestamp).toLocaleString('en-CA', { timeZone: 'Asia/Kolkata', hour12: false }).replace(',', '') : '',
+          place: formData.signaturePlace || '',
+        },
       });
 
       if (result.success) {

@@ -260,14 +260,18 @@ export type OnboardingStatus = 'valid' | 'expired' | 'completed' | 'invalid' | '
 
 export async function checkOnboardingStatus(uhid: string): Promise<{ status: OnboardingStatus; supplier_name?: string }> {
   const response = await fetch(
-    `${API_BASE_URL}/api/method/supplier_onboarding_status?uhid=${encodeURIComponent(uhid)}`,
+    `${API_BASE_URL}/api/method/geri_care.api.kyc.supplier_onboarding_status?uhid=${encodeURIComponent(uhid)}`,
     {
       method: 'GET',
-      headers: getHeaders(),
+      headers: { 'Accept': 'application/json' },
       mode: 'cors',
       credentials: 'omit',
     }
   );
+
+  if (response.status === 404) {
+    return { status: 'invalid' };
+  }
 
   if (!response.ok) {
     return { status: 'error' };
@@ -278,32 +282,98 @@ export async function checkOnboardingStatus(uhid: string): Promise<{ status: Onb
 }
 
 /**
- * Look up supplier name by custom_uhid
+ * Get supplier data + addresses via custom app (no auth needed)
  */
-export async function getSupplierByUhid(uhid: string): Promise<string> {
-  const filters = JSON.stringify([['custom_uhid', '=', uhid]]);
-  const fields = JSON.stringify(['name']);
+/**
+ * Upload file for onboarding (via custom app, no auth needed)
+ */
+export async function uploadOnboardingFile(
+  uhid: string,
+  file: File,
+  fieldName: string
+): Promise<string> {
+  // Convert file to base64
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]); // Remove data:...;base64, prefix
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
-  const response = await fetch(
-    `${API_BASE_URL}/api/resource/Supplier?filters=${encodeURIComponent(filters)}&fields=${encodeURIComponent(fields)}&limit_page_length=1`,
-    {
-      method: 'GET',
-      headers: getHeaders(),
-      mode: 'cors',
-      credentials: 'omit',
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/api/method/geri_care.api.kyc.upload_onboarding_file`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    mode: 'cors',
+    credentials: 'omit',
+    body: JSON.stringify({ uhid, filename: file.name, filedata: base64, field_name: fieldName }),
+  });
 
   if (!response.ok) {
-    throw new Error(`Failed to look up supplier by UHID: ${response.statusText}`);
+    throw new Error(`Failed to upload file: ${response.statusText}`);
   }
 
   const result = await response.json();
-  if (!result.data || result.data.length === 0) {
+  return result.message?.file_url || '';
+}
+
+/**
+ * Submit all onboarding data (via custom app, no auth needed)
+ */
+export async function submitOnboardingViaApp(
+  uhid: string,
+  formData: Record<string, unknown>
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/method/geri_care.api.kyc.submit_onboarding`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    mode: 'cors',
+    credentials: 'omit',
+    body: JSON.stringify({ uhid, form_data: formData }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to submit onboarding data';
+    try {
+      const errorData = await response.json();
+      if (errorData._server_messages) {
+        const parsed = JSON.parse(errorData._server_messages);
+        const msg = typeof parsed[0] === 'string' ? JSON.parse(parsed[0])?.message : parsed[0];
+        if (msg) errorMessage = msg;
+      }
+    } catch { /* use default */ }
+    throw new Error(errorMessage);
+  }
+
+  const result = await response.json();
+  return result.message || { success: false, message: 'Unknown error' };
+}
+
+export async function getSupplierDataByUhid(uhid: string): Promise<{ supplier: SupplierData; addresses: AddressData[] }> {
+  const response = await fetch(`${API_BASE_URL}/api/method/geri_care.api.kyc.get_supplier_data`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    mode: 'cors',
+    credentials: 'omit',
+    body: JSON.stringify({ uhid }),
+  });
+
+  if (!response.ok) {
     throw new Error('Supplier not found for the given ID');
   }
 
-  return result.data[0].name;
+  const result = await response.json();
+  const data = result.message;
+  if (!data || !data.supplier) {
+    throw new Error('Supplier not found');
+  }
+
+  return { supplier: data.supplier, addresses: data.addresses || [] };
 }
 
 /**

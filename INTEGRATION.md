@@ -28,7 +28,7 @@ Browser (React App)
 ## URL & Identification
 
 - Onboarding link format: `https://domain.com/?uhid=<UHID_VALUE>`
-- `uhid` = `custom_uhid` field on Supplier doctype (opaque ID)
+- `uhid` = `custom_uuid4` field on Supplier doctype (opaque ID)
 - Frontend resolves UHID to Supplier name via ERPNext API filter
 - Supplier document name (e.g., `SUP-00001`) never exposed in URL or browser
 
@@ -134,7 +134,7 @@ Add to `sites/<your-site>/site_config.json`:
 - ERPNext API key/secret: plan to move to cookie-based auth or server-side session
 
 ### URL Protection
-- Supplier identified by `custom_uhid` (opaque ID) instead of Supplier document name
+- Supplier identified by `custom_uuid4` (opaque ID) instead of Supplier document name
 - URL param: `?uhid=<value>` instead of `?supplier=<name>`
 - Supplier name resolved server-side via ERPNext API filter
 
@@ -170,7 +170,7 @@ VITE_SUREPASS_BASE_URL    --> surepass_base_url (site_config.json)
 
 ```
 1. User opens link: ?uhid=ABC123
-2. Frontend calls ERPNext: GET /api/resource/Supplier?filters=[["custom_uhid","=","ABC123"]]
+2. Frontend calls ERPNext: GET /api/resource/Supplier?filters=[["custom_uuid4","=","ABC123"]]
 3. ERPNext returns supplier name (internal, not shown to user)
 4. Frontend loads supplier data + form
 
@@ -211,7 +211,7 @@ src/
 
 - [x] Remove sensitive console.log statements
 - [x] Add localStorage encryption (AES-256-GCM)
-- [x] Switch URL param from `supplier` to `uhid` (custom_uhid lookup)
+- [x] Switch URL param from `supplier` to `uhid` (custom_uuid4 lookup)
 - [x] Add "Already Submitted" page for verified suppliers
 - [x] Add "Link Expired" page for invalid/expired UHID
 - [ ] Create ERPNext server scripts (verify_pan, verify_gst, verify_bank_account, verify_msme)

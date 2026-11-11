@@ -21,7 +21,7 @@ export function PANDetailsStep() {
   const panLabel = isCompany ? 'PAN Number (Company)' : 'PAN Number (Individual)';
 
   const handlePANChange = (value: string) => {
-    updatePANDetails({ pan_number: value.toUpperCase() });
+    updatePANDetails({ pan_number: value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 10) });
   };
 
   const handleVerify = async () => {

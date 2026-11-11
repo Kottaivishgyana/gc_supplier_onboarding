@@ -16,11 +16,11 @@ export function BankAccountStep() {
   const [verificationMessage, setVerificationMessage] = useState<string>('');
 
   const handleIFSCChange = (value: string) => {
-    updateBankAccount({ ifsc_code: value.toUpperCase() });
+    updateBankAccount({ ifsc_code: value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 11) });
   };
 
   const handleAccountNumberChange = (value: string) => {
-    updateBankAccount({ account_number: value });
+    updateBankAccount({ account_number: value.replace(/\D/g, '').slice(0, 18) });
   };
 
   const handleVerify = async () => {

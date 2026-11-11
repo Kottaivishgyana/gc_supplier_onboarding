@@ -27,7 +27,7 @@ export function GSTInfoStep() {
   } | null>(null);
 
   const handleGSTNumberChange = (value: string) => {
-    updateGSTInfo({ gst_number: value.toUpperCase() });
+    updateGSTInfo({ gst_number: value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 15) });
   };
 
   const handleVerify = async () => {
