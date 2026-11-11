@@ -9,8 +9,9 @@ import type { OnboardingFormData } from '@/types/onboarding';
 const RAW_API_URL = import.meta.env.VITE_ERPNEXT_API_URL ;
 // Remove trailing slash to avoid double slashes in URLs
 const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
-const API_KEY = import.meta.env.VITE_ERPNEXT_API_KEY || '';
-const API_SECRET = import.meta.env.VITE_ERPNEXT_API_SECRET || '';
+// Legacy — kept for old functions not yet removed. No secrets in production.
+const API_KEY = '';
+const API_SECRET = '';
 
 interface ApiResponse<T> {
   message?: T;
@@ -259,6 +260,7 @@ function getFileUploadHeaders(): HeadersInit {
 export type OnboardingStatus = 'valid' | 'expired' | 'completed' | 'invalid' | 'error';
 
 export async function checkOnboardingStatus(uhid: string): Promise<{ status: OnboardingStatus; supplier_name?: string }> {
+  // Reuse get_supplier_data which returns status + data in one call
   const response = await fetch(
     `${API_BASE_URL}/api/method/geri_care.api.kyc.supplier_onboarding_status?uhid=${encodeURIComponent(uhid)}`,
     {
@@ -274,6 +276,11 @@ export async function checkOnboardingStatus(uhid: string): Promise<{ status: Onb
   }
 
   if (!response.ok) {
+    // Check if HTML response (daily limit page)
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      return { status: 'error' };
+    }
     return { status: 'error' };
   }
 
@@ -364,6 +371,10 @@ export async function getSupplierDataByUhid(uhid: string): Promise<{ supplier: S
   });
 
   if (!response.ok) {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      throw new Error('Service temporarily unavailable. Please try again later.');
+    }
     throw new Error('Supplier not found for the given ID');
   }
 
@@ -1474,128 +1485,6 @@ export async function submitOnboardingData(
   }
 }
 
-/**
- * Check if a user exists in Frappe ERPNext
- * Returns true if user exists, false otherwise
- * Directly queries user by email in URL path for fastest response
- */
-export async function checkUserExists(email: string): Promise<boolean> {
-  try {
-    // Use the same API credentials for authentication
-    if (!API_KEY || !API_SECRET) {
-      console.warn('API credentials not configured for user check');
-      return false;
-    }
-
-    if (!API_BASE_URL) {
-      console.warn('API URL not configured for user check');
-      return false;
-    }
-
-    // Query user directly by email in URL path - fastest method
-    const encodedEmail = encodeURIComponent(email);
-    const response = await fetch(
-      `${API_BASE_URL}/api/resource/User/${encodedEmail}`,
-      {
-        method: 'GET',
-        headers: getHeaders(),
-        mode: 'cors',
-        credentials: 'omit',
-
-      }
-    );
-
-    // 200 OK means user exists, 404 means user doesn't exist
-    if (response.status === 200) {
-      return true;
-    } else if (response.status === 404) {
-      return false;
-    } else {
-      // Other status codes - log and assume user doesn't exist
-      console.warn('Failed to check user existence:', response.statusText);
-      return false;
-    }
-  } catch (error) {
-    console.error('Error checking user existence:', error);
-    // On error, assume user doesn't exist to allow signup
-    return false;
-  }
-}
-
-/**
- * Create a new user in Frappe ERPNext
- */
-interface CreateUserPayload {
-  email: string;
-  first_name: string;
-  last_name: string;
-  new_password: string;
-  send_welcome_email: number;
-  enabled: number;
-  roles: { role: string }[];
-}
-
-export async function createUser(
-  payload: CreateUserPayload
-): Promise<{ success: boolean; message: string }> {
-  try {
-    // Check if API credentials are configured
-    if (!API_KEY || !API_SECRET) {
-      return {
-        success: false,
-        message: 'API credentials are not configured. Please set VITE_ERPNEXT_API_KEY and VITE_ERPNEXT_API_SECRET environment variables.',
-      };
-    }
-
-    if (!API_BASE_URL) {
-      return {
-        success: false,
-        message: 'API URL is not configured. Please set VITE_ERPNEXT_API_URL environment variable.',
-      };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/api/resource/User`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      // Handle 401 Unauthorized specifically
-      if (response.status === 401) {
-        return {
-          success: false,
-          message: 'Authentication failed (401). Please verify your API credentials (VITE_ERPNEXT_API_KEY and VITE_ERPNEXT_API_SECRET) are correct and the API user has proper permissions.',
-        };
-      }
-
-      // Try to get error message from response
-      let errorMessage = `Failed to create user: ${response.statusText}`;
-      try {
-        const error = await response.json();
-        errorMessage = error.exception || error.message || errorMessage;
-      } catch {
-        // If JSON parsing fails, use default message
-      }
-
-      return {
-        success: false,
-        message: errorMessage,
-      };
-    }
-
-    return {
-      success: true,
-      message: 'User created successfully',
-    };
-  } catch (error) {
-    console.error('User creation error:', error);
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to create user',
-    };
-  }
-}
 
 /**
  * Parse address string to components

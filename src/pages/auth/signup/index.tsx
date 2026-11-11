@@ -5,7 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useOnboardingStore } from '@/stores/onboardingStore';
-import { createUser, checkUserExists } from '@/services/erpnextApi';
+// Signup flow removed — user goes directly to onboarding form
+// Stubs for unused functions (file kept for reference)
+
+const checkUserExists = async (_email: string) => false;
+const createUser = async (_payload: Record<string, unknown>) => ({ success: true, message: '' });
 
 interface SignupPageProps {
   onSignupComplete?: () => void;

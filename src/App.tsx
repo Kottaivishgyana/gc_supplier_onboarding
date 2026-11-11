@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { OnboardingPage } from '@/pages/onboarding';
-import { SignupPage } from '@/pages/auth/signup';
 import { checkOnboardingStatus } from '@/services/erpnextApi';
 import type { OnboardingStatus } from '@/services/erpnextApi';
 import { Loader2, Clock, ShieldCheck, ShieldAlert, AlertCircle } from 'lucide-react';
@@ -125,30 +124,7 @@ function App() {
     );
   }
 
-  // Valid — show signup/onboarding flow
-  const getInitialSignupState = (): boolean => {
-    if (supplierId) {
-      const signupKey = `signup_complete_${supplierId}`;
-      return localStorage.getItem(signupKey) === 'true';
-    }
-    return false;
-  };
-
-  return <ValidFlow supplierId={supplierId} getInitialSignupState={getInitialSignupState} />;
-}
-
-function ValidFlow({ supplierId, getInitialSignupState }: { supplierId: string | null; getInitialSignupState: () => boolean }) {
-  const [hasSignedUp, setHasSignedUp] = useState<boolean>(getInitialSignupState);
-
-  if (!hasSignedUp) {
-    return <SignupPage onSignupComplete={() => {
-      if (supplierId) {
-        localStorage.setItem(`signup_complete_${supplierId}`, 'true');
-      }
-      setHasSignedUp(true);
-    }} />;
-  }
-
+  // Valid — go directly to onboarding form
   return <OnboardingPage />;
 }
 
